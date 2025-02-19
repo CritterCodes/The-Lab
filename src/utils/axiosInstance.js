@@ -1,6 +1,8 @@
 // src/utils/axiosInstance.js
 import axios from 'axios';
 
+export const runtime = "nodejs";
+
 // Create an Axios instance
 const axiosInstance = axios.create({
     baseURL: `${process.env.NEXT_PUBLIC_URL}/api/v1`, // Keep your base URL in .env file

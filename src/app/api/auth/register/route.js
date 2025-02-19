@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import AuthController from "../[...nextauth]/controller";
 
+export const runtime = "nodejs";
+
 /**
  * @route POST /api/auth/register
  * @desc Handles new user registration with proper error handling and validation
