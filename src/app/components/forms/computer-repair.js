@@ -24,8 +24,8 @@ const ComputerRepairForm = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Paper elevation={3} sx={{ padding: 3, marginTop: 8 }}>
+    <Container component="main" maxWidth="sm" sx={{ padding: { xs: 2, sm: 3 }, marginTop: { xs: 4, sm: 8 } }}>
+      <Paper elevation={3} sx={{ padding: { xs: 2, sm: 3 } }}>
         <Typography component="h1" variant="h5" align="center" gutterBottom>
           Computer Repair Request
         </Typography>
@@ -121,6 +121,7 @@ const ComputerRepairForm = () => {
                   variant="contained"
                   color="primary"
                   type="submit"
+                  sx={{ padding: { xs: 1, sm: 1.5 } }}
                 >
                   Submit Request
                 </Button>

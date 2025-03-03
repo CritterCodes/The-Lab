@@ -33,7 +33,7 @@ const HeroSection = () => {
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        padding: "4rem 1rem",
+        padding: { xs: "2rem 1rem", sm: "4rem 1rem" },
         background: `linear-gradient(135deg, ${theme.palette.background.default} 50%, ${theme.palette.background.paper} 100%)`,
         color: theme.palette.text.primary,
         minHeight: "90vh",
@@ -136,7 +136,7 @@ const HeroSection = () => {
               variant="outlined"
               size="large"
               sx={{
-                padding: "0.75rem 2rem",
+                padding: { xs: "0.5rem 1rem", sm: "0.75rem 2rem" },
                 fontSize: "1rem",
                 textTransform: "uppercase",
                 boxShadow: `0px 4px 10px ${theme.palette.primary.dark}`,

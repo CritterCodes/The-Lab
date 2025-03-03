@@ -16,7 +16,7 @@ const ContactSection = () => {
     >
       <Box
         sx={{
-          padding: "4rem 1rem",
+          padding: { xs: "2rem 1rem", sm: "4rem 1rem" },
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -35,6 +35,7 @@ const ContactSection = () => {
             letterSpacing: "0.1em",
             marginBottom: "1.5rem",
             color: theme.palette.primary.main,
+            fontSize: { xs: "1.5rem", sm: "2rem" },
           }}
         >
           We’d Love to Hear From You
@@ -49,6 +50,7 @@ const ContactSection = () => {
             lineHeight: "1.6",
             marginBottom: "2rem",
             color: theme.palette.text.primary,
+            fontSize: { xs: "1rem", sm: "1.25rem" },
           }}
         >
           Address: 805 N Greenwood Ave., Fort Smith, AR, 72901
@@ -163,7 +165,7 @@ const ContactSection = () => {
               size="large"
               sx={{
                 width: "100%",
-                padding: "0.75rem 1.5rem",
+                padding: { xs: "0.5rem 1rem", sm: "0.75rem 1.5rem" },
                 fontWeight: "bold",
                 textTransform: "uppercase",
                 backgroundColor: theme.palette.primary.main,

@@ -20,7 +20,7 @@ const MembershipSection = () => {
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
-          padding: "3rem 1.5rem",
+          padding: { xs: "2rem 1rem", sm: "3rem 1.5rem" },
           backgroundColor: theme.palette.background.default,
           color: theme.palette.text.primary,
           borderRadius: "16px",
@@ -40,7 +40,7 @@ const MembershipSection = () => {
             gutterBottom
             sx={{
               fontWeight: "bold",
-              fontSize: { xs: "1.8rem", sm: "2.2rem" },
+              fontSize: { xs: "1.5rem", sm: "2.2rem" },
               color: theme.palette.primary.main,
               marginBottom: "1rem",
             }}
@@ -81,7 +81,7 @@ const MembershipSection = () => {
             variant="contained"
             sx={{
               fontWeight: "bold",
-              padding: "0.8rem 2rem",
+              padding: { xs: "0.6rem 1.5rem", sm: "0.8rem 2rem" },
               fontSize: "1rem",
               textTransform: "none",
               borderRadius: "30px",

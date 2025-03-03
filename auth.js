@@ -114,7 +114,7 @@ const providers = [
                     username: newUser.user.username,
                     email: newUser.user.email,
                     role: newUser.user.role,
-                    image: profile.picture
+                    image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
                 };
             }
 

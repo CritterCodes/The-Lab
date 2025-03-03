@@ -17,7 +17,7 @@ const AboutSection = () => {
     >
       <Box
         sx={{
-          padding: { xs: "3rem 1rem", sm: "4rem 2rem" },
+          padding: { xs: "2rem 1rem", sm: "4rem 2rem" },
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -72,7 +72,7 @@ const AboutSection = () => {
           </Typography>
         </motion.div>
 
-        {/* Button 
+        {/* Button */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,7 +91,7 @@ const AboutSection = () => {
               color: theme.palette.primary.main,
               textTransform: "uppercase",
               fontWeight: "bold",
-              padding: "0.5rem 2rem",
+              padding: { xs: "0.5rem 1rem", sm: "0.5rem 2rem" },
               transition: "all 0.3s ease",
               "&:hover": {
                 backgroundColor: theme.palette.primary.main,
@@ -102,7 +102,7 @@ const AboutSection = () => {
           >
             Learn More About Us
           </Button>
-        </motion.div>*/}
+        </motion.div>
       </Box>
     </motion.div>
   );
