@@ -1,16 +1,19 @@
 "use client";
 import React, { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { Box, Typography, Button, Breadcrumbs, Link, Snackbar } from '@mui/material';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Box, Typography, Button, Breadcrumbs, Link, Snackbar, useTheme } from '@mui/material';
 import UserHeader from '@/app/components/profile/header';
 import UserDetailsForm from '@/app/components/profile/details';
 import UserImage from '@/app/components/profile/image';
 import UsersService from '@/services/users';
-import MembershipSection from '@/app/components/landing/membership';
 import MembershipTab from '@/app/components/profile/tabs/membership';
+import LoadingTerminal from '@/app/components/LoadingTerminal';
 
 const ViewUserPage = ({ params }) => {
+    const { data: session } = useSession();
     const resolvedParams = use(params);
+    const searchParams = useSearchParams();
     const [userID, setUserID] = useState(resolvedParams?.userID);
     const [user, setUser] = useState(null);
     const [updatedUser, setUpdatedUser] = useState({});
@@ -19,10 +22,20 @@ const ViewUserPage = ({ params }) => {
     const [snackbarSeverity, setSnackbarSeverity] = useState('info');
     const [hasChanges, setHasChanges] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(parseInt(searchParams.get('tab')) || 0);
     const [open, setOpen] = useState(false);
     const router = useRouter();
+    const theme = useTheme();
 
+    const loadingSteps = [
+        'Initializing...',
+        'Loading user data...',
+        'Fetching membership plans...',
+        'Connecting to database...',
+        'Retrieving session information...',
+        'Finalizing setup...',
+        'Almost there...'
+    ];
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -91,19 +104,17 @@ const ViewUserPage = ({ params }) => {
 
     if (loading) {
         console.log("⏳ Loading User Data...");
-        return <Typography>Loading user data...</Typography>;
+        return <LoadingTerminal steps={loadingSteps} />;
     }
 
-
-
     return (
-        <Box sx={{ padding: { xs: '10px', sm: '20px' } }}>
+        <Box sx={{ padding: { xs: '10px', sm: '20px' }, backgroundColor: theme.palette.background.default, color: theme.palette.text.primary }}>
             {/* Breadcrumbs */}
-            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-                <Link underline="hover" color="inherit" onClick={() => router.push('/dashboard')} sx={{ cursor: 'pointer' }}>
+            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2, color: theme.palette.text.primary }}>
+                <Link underline="hover" color="inherit" onClick={() => router.push('/dashboard')} sx={{ cursor: 'pointer', color: theme.palette.text.primary }}>
                     Dashboard
                 </Link>
-                <Typography color="text.primary">Profile</Typography>
+                <Typography sx={{ color: theme.palette.primary }}>Profile</Typography>
             </Breadcrumbs>
 
             {/* User Header with Tabs Integrated */}
@@ -115,12 +126,11 @@ const ViewUserPage = ({ params }) => {
                 setActiveTab={setActiveTab}
             />
 
-
             {/* Tab Content Handling */}
             {/* User Details Tab */}
             {activeTab === 0 && (
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, mt: 3 }}>
-                    <UserImage picture={updatedUser.image} />
+                    <UserImage picture={session?.user?.image} />
                     <UserDetailsForm user={updatedUser} onEdit={handleEditChange} />
                 </Box>
             )}
@@ -130,20 +140,6 @@ const ViewUserPage = ({ params }) => {
                   <MembershipTab user={user} />
                 </Box>
             )}
-            {/* Profile Tab */}
-            {activeTab === 2 && (
-                <Box sx={{ mt: 3 }}>
-                </Box>
-            )}
-            
-
-            {/* Settings Tab */}
-            {activeTab === 3 && (
-                <Box sx={{ mt: 3 }}>
-                </Box>
-            )}
-
-
             {/* Snackbar */}
             <Snackbar
                 open={snackbarOpen}

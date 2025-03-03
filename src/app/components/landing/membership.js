@@ -1,10 +1,11 @@
 "use client";
 
-import { Box, Typography, Button } from "@mui/material";
+import { Box, Typography, Button, useTheme } from "@mui/material";
 import { motion, useReducedMotion } from "motion/react";
 
 const MembershipSection = () => {
   const shouldReduceMotion = useReducedMotion();
+  const theme = useTheme();
 
   return (
     <motion.div
@@ -20,7 +21,8 @@ const MembershipSection = () => {
           alignItems: "center",
           textAlign: "center",
           padding: "3rem 1.5rem",
-          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
           borderRadius: "16px",
           margin: "1rem",
           boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
@@ -39,11 +41,11 @@ const MembershipSection = () => {
             sx={{
               fontWeight: "bold",
               fontSize: { xs: "1.8rem", sm: "2.2rem" },
-              color: "#1e3a8a",
+              color: theme.palette.primary.main,
               marginBottom: "1rem",
             }}
           >
-            Join Our Community
+            Join Our Discord Community
           </Typography>
         </motion.div>
 
@@ -59,14 +61,11 @@ const MembershipSection = () => {
               maxWidth: "600px",
               fontSize: { xs: "1rem", sm: "1.2rem" },
               lineHeight: "1.6",
-              color: "#334155",
+              color: theme.palette.text.primary,
               marginBottom: "2rem",
             }}
           >
-            Benefits of membership include access to tools and equipment,
-            skill-building workshops, and networking opportunities with fellow
-            creators. <br />
-            <strong>Monthly membership: $30/month</strong>.
+            Stay updated with the latest news, events, and connect with fellow creators. Join our Discord community to get support and be part of the conversation!
           </Typography>
         </motion.div>
 
@@ -86,14 +85,16 @@ const MembershipSection = () => {
               fontSize: "1rem",
               textTransform: "none",
               borderRadius: "30px",
-              backgroundColor: "#6366f1",
-              color: "#ffffff",
+              backgroundColor: theme.palette.primary.main,
+              color: theme.palette.background.default,
               "&:hover": {
-                backgroundColor: "#4f46e5",
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.background.default,
               },
             }}
+            onClick={() => window.open("https://discord.gg/YWcAd3TCDV", "_blank")}
           >
-            View Membership Options
+            Join Our Discord
           </Button>
         </motion.div>
       </Box>

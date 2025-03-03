@@ -1,14 +1,16 @@
 "use client";
 import React, { useState } from "react";
 import { SignInPage } from "@toolpad/core/SignInPage";
-import { Link, Snackbar, Alert } from "@mui/material";
-import { useSearchParams } from 'next/navigation';  // ✅ Import the correct Next.js hook
+import { Link, Snackbar, Alert, Box, useTheme } from "@mui/material";
+import { useSearchParams } from 'next/navigation';
 import { providerMap } from "../../../../auth";
 import { signIn } from "next-auth/react";
+import { AppProvider } from "@toolpad/core/AppProvider";
+import theme from "../../../../theme"; // Import the theme
 
 const ForgotPasswordLink = () => {
     return (
-        <Link href="/auth/forgot-password" underline="hover">
+        <Link href="/auth/forgot-password" underline="hover" sx={{ color: 'primary.main' }}>
             Forgot your password?
         </Link>
     );
@@ -16,7 +18,7 @@ const ForgotPasswordLink = () => {
 
 const CreateAnAccount = () => {
     return (
-        <Link href="/auth/register" underline="hover">
+        <Link href="/auth/register" underline="hover" sx={{ color: 'primary.main' }}>
             Need an account? sign up here
         </Link>
     );
@@ -24,7 +26,7 @@ const CreateAnAccount = () => {
 
 const SignIn = () => {
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';  // ✅ Fallback if missing
+    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
     const [error, setError] = useState(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -55,29 +57,82 @@ const SignIn = () => {
     };
 
     return (
-        <>
-            <SignInPage
-                signIn={handleSignIn}
-                providers={providerMap}
-                slotProps={{
-                    forgotPasswordLink: ForgotPasswordLink,
-                    signUpLink: CreateAnAccount,
-                    emailField: { autoFocus: true }
+        <AppProvider theme={theme}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '100vh',
+                    backgroundColor: theme.palette.background.default,
+                    color: theme.palette.text.primary,
+                    padding: '2rem',
                 }}
-            />
-
-            {/* ✅ Snackbar for Error Handling */}
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={6000}
-                onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
-                <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
-                    {error}
-                </Alert>
-            </Snackbar>
-        </>
+                <SignInPage
+                    signIn={handleSignIn}
+                    providers={providerMap}
+                    slotProps={{
+                        forgotPasswordLink: ForgotPasswordLink,
+                        signUpLink: CreateAnAccount,
+                        emailField: { autoFocus: true }
+                    }}
+                    sx={{
+                        '& .MuiBox-root': {
+                            padding: { xs: '10px', sm: '20px' },
+                            backgroundColor: theme.palette.background.paper,
+                            color: theme.palette.text.primary,
+                            borderColor: theme.palette.primary.main,
+                            borderRadius: '8px',
+                            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.5)',
+                            maxWidth: '400px',
+                            width: '100%',
+                        },
+                        '& .MuiInputBase-root': {
+                            color: theme.palette.text.primary,
+                        },
+                        '& .MuiInputLabel-root': {
+                            color: theme.palette.text.primary,
+                        },
+                        '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                                borderColor: theme.palette.primary.main,
+                            },
+                            '&:hover fieldset': {
+                                borderColor: theme.palette.primary.main,
+                            },
+                            '&.Mui-focused fieldset': {
+                                borderColor: theme.palette.primary.main,
+                            },
+                        },
+                        '& .MuiButton-root': {
+                            color: theme.palette.primary.main,
+                            borderColor: theme.palette.primary.main,
+                            backgroundColor: theme.palette.background.default,
+                            '&:hover': {
+                                backgroundColor: theme.palette.primary.main,
+                                color: theme.palette.background.default,
+                            },
+                        },
+                        '& .MuiTypography-root': {
+                            color: theme.palette.primary.main,
+                        },
+                    }}
+                />
+
+                {/* Snackbar for Error Handling */}
+                <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={6000}
+                    onClose={handleSnackbarClose}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                >
+                    <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+                        {error}
+                    </Alert>
+                </Snackbar>
+            </Box>
+        </AppProvider>
     );
 };
 

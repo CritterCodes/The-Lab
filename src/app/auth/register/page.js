@@ -17,6 +17,7 @@ const RegisterPage = () => {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    username: "", // new field
     email: "",
     password: "",
   });
@@ -87,6 +88,18 @@ const RegisterPage = () => {
                 name="lastName"
                 variant="outlined"
                 value={form.lastName}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Username"
+                name="username"
+                variant="outlined"
+                value={form.username}
                 onChange={handleChange}
                 required
               />

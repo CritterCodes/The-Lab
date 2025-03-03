@@ -9,6 +9,7 @@ export default class User {
     constructor( 
         firstName, 
         lastName, 
+        username, // new parameter
         email, 
         password, 
         phoneNumber,
@@ -19,6 +20,7 @@ export default class User {
         this.userID = `user-${uuidv4().slice(0, 8)}`;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.username = username; // save username
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.address = {};

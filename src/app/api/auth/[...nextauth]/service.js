@@ -17,7 +17,7 @@ export default class AuthService {
      * - Called during manual sign-up
      */
     static async register(userData) {
-        const { firstName, lastName, email, password, phoneNumber, status } = userData;
+        const { firstName, lastName, username, email, password, phoneNumber, status } = userData; // added username
         console.log(userData);
         console.log('looking for user');
         const existingUser = await UserModel.findByEmail(email);
@@ -32,6 +32,7 @@ export default class AuthService {
         const newUser = new User(
             firstName,
             lastName,
+            username, // new argument
             email,
             hashedPassword,
             phoneNumber ? phoneNumber : '',

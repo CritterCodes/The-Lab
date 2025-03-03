@@ -1,10 +1,11 @@
 "use client";
 
-import { Box, Typography, TextField, Button } from "@mui/material";
+import { Box, Typography, TextField, Button, useTheme } from "@mui/material";
 import { motion, useReducedMotion } from "motion/react";
 
 const ContactSection = () => {
   const shouldReduceMotion = useReducedMotion();
+  const theme = useTheme();
 
   return (
     <motion.div
@@ -20,8 +21,8 @@ const ContactSection = () => {
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
-          backgroundColor: "background.default",
-          color: "text.primary",
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
         }}
       >
         {/* Heading */}
@@ -33,6 +34,7 @@ const ContactSection = () => {
             fontWeight: "bold",
             letterSpacing: "0.1em",
             marginBottom: "1.5rem",
+            color: theme.palette.primary.main,
           }}
         >
           We’d Love to Hear From You
@@ -46,13 +48,13 @@ const ContactSection = () => {
             maxWidth: "600px",
             lineHeight: "1.6",
             marginBottom: "2rem",
+            color: theme.palette.text.primary,
           }}
         >
-          Address: 123 Example Street, Fort Smith, AR
+          Address: 805 N Greenwood Ave., Fort Smith, AR, 72901
           <br />
           Email: info@fablabfortsmith.com
           <br />
-          Phone: (555) 123-4567
         </Typography>
 
         {/* Contact Form */}
@@ -73,7 +75,24 @@ const ContactSection = () => {
             fullWidth
             required
             sx={{
-              backgroundColor: "background.paper",
+              backgroundColor: theme.palette.background.paper,
+              "& .MuiInputBase-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiInputLabel-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&:hover fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+              },
             }}
           />
           <TextField
@@ -83,7 +102,24 @@ const ContactSection = () => {
             fullWidth
             required
             sx={{
-              backgroundColor: "background.paper",
+              backgroundColor: theme.palette.background.paper,
+              "& .MuiInputBase-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiInputLabel-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&:hover fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+              },
             }}
           />
           <TextField
@@ -94,7 +130,24 @@ const ContactSection = () => {
             fullWidth
             required
             sx={{
-              backgroundColor: "background.paper",
+              backgroundColor: theme.palette.background.paper,
+              "& .MuiInputBase-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiInputLabel-root": {
+                color: theme.palette.text.primary,
+              },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&:hover fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: theme.palette.primary.main,
+                },
+              },
             }}
           />
           <motion.div
@@ -113,6 +166,12 @@ const ContactSection = () => {
                 padding: "0.75rem 1.5rem",
                 fontWeight: "bold",
                 textTransform: "uppercase",
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.background.default,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.background.default,
+                },
               }}
             >
               Submit

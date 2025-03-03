@@ -1,10 +1,11 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Box, Typography, Button } from "@mui/material";
+import { Box, Typography, Button, useTheme } from "@mui/material";
 
 const AboutSection = () => {
   const shouldReduceMotion = useReducedMotion();
+  const theme = useTheme();
 
   return (
     <motion.div
@@ -21,8 +22,8 @@ const AboutSection = () => {
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
-          backgroundColor: "background.default",
-          color: "text.primary",
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
         }}
       >
         {/* Title */}
@@ -40,6 +41,7 @@ const AboutSection = () => {
               letterSpacing: "0.1em",
               fontSize: { xs: "1.5rem", sm: "2rem" },
               marginBottom: "1.5rem",
+              color: theme.palette.primary.main,
             }}
           >
             What is Fab Lab Fort Smith?
@@ -60,6 +62,7 @@ const AboutSection = () => {
               fontSize: { xs: "1rem", sm: "1.25rem" },
               lineHeight: "1.6",
               marginBottom: "2rem",
+              color: theme.palette.text.primary,
             }}
           >
             Fab Lab Fort Smith is a collaborative maker space where creativity
@@ -69,7 +72,7 @@ const AboutSection = () => {
           </Typography>
         </motion.div>
 
-        {/* Button */}
+        {/* Button 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -84,22 +87,22 @@ const AboutSection = () => {
             variant="outlined"
             size="large"
             sx={{
-              borderColor: "primary.main",
-              color: "primary.main",
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
               textTransform: "uppercase",
               fontWeight: "bold",
               padding: "0.5rem 2rem",
               transition: "all 0.3s ease",
               "&:hover": {
-                backgroundColor: "primary.main",
-                color: "white",
-                borderColor: "primary.main",
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.background.default,
+                borderColor: theme.palette.primary.main,
               },
             }}
           >
             Learn More About Us
           </Button>
-        </motion.div>
+        </motion.div>*/}
       </Box>
     </motion.div>
   );

@@ -8,8 +8,6 @@ const catalogApi = squareClient.catalogApi;
 const customersApi = squareClient.customersApi;
 const subscriptionsApi = squareClient.subscriptionsApi;
 
-
-
 // 🟢 GET: Retrieve Membership Plans
 export async function GET() {
   try {
@@ -85,117 +83,6 @@ export async function GET() {
   } catch (error) {
     console.error("❌ [GET] Error fetching membership plans:", error);
     return NextResponse.json({ error: "Failed to load membership plans." }, { status: 500 });
-  }
-}
-
-
-export async function POST(req) {
-  console.log("📢 [POST] Processing subscription request...");
-
-  try {
-    const { userID, planId } = await req.json();
-    console.log(`🔍 [POST] User ID: ${userID}, Plan ID: ${planId}`);
-
-    if (!userID || !planId) {
-      console.warn("⚠️ [POST] Missing required parameters.");
-      return NextResponse.json({ error: "Missing required parameters." }, { status: 400 });
-    }
-
-    // Fetch user from DB
-    let user = await db.dbUsers().findOne({ userID });
-
-    if (!user) {
-      console.warn("⚠️ [POST] User not found.");
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
-    }
-
-    // ✅ Create Square Customer if missing
-    let squareCustomerId = user.squareCustomerId;
-    if (!squareCustomerId) {
-      console.log("📌 [POST] User is not linked to Square. Creating a new Square customer...");
-
-      const customerBody = {
-        idempotencyKey: uuidv4(),
-        givenName: user.firstName || "Unknown",
-        familyName: user.lastName || "User",
-        emailAddress: user.email,
-        referenceId: userID,
-      };
-
-      try {
-        const { result } = await customersApi.createCustomer(customerBody);
-        squareCustomerId = result.customer.id;
-
-        // Store Square Customer ID in DB
-        await db.dbUsers().updateOne({ userID }, { $set: { squareCustomerId } });
-
-        console.log("✅ [POST] Square customer created:", result.customer);
-      } catch (error) {
-        console.error("❌ [POST] Failed to create Square customer:", error);
-        return NextResponse.json({ error: "Failed to create Square customer." }, { status: 500 });
-      }
-    }
-
-    // ✅ Fetch plan details from Square to get the `plan_variation_id`
-    console.log("📤 [POST] Fetching plan variation ID...");
-    const { result } = await catalogApi.listCatalog(undefined, "SUBSCRIPTION_PLAN");
-
-    if (!result.objects || result.objects.length === 0) {
-      console.error("❌ [POST] No subscription plans found.");
-      return NextResponse.json({ error: "No subscription plans found." }, { status: 500 });
-    }
-
-    // Find the correct plan variation ID
-    const plan = result.objects.find((p) => p.id === planId);
-    if (!plan) {
-      console.error("❌ [POST] Plan ID not found in Square.");
-      return NextResponse.json({ error: "Plan ID not found." }, { status: 400 });
-    }
-
-    // Find the correct variation ID
-    const planVariation = plan.subscriptionPlanData.subscriptionPlanVariations.find(
-      (variation) => variation.present_at_all_locations === true
-    );
-
-    if (!planVariation) {
-      console.error("❌ [POST] No valid plan variations available.");
-      return NextResponse.json({ error: "No valid plan variations found." }, { status: 400 });
-    }
-
-    const planVariationId = planVariation.id;
-    console.log(`✅ [POST] Found plan variation ID: ${planVariationId}`);
-
-    // ✅ Proceed with subscription
-    console.log("📤 [POST] Sending subscription request to Square...");
-    const subscriptionBody = {
-      idempotencyKey: uuidv4(),
-      locationId: process.env.SQUARE_LOCATION_ID,
-      customerId: squareCustomerId,
-      planVariationId: planVariationId, // FIXED: Use planVariationId instead of planId
-    };
-
-    const { result: subscriptionResult } = await subscriptionsApi.createSubscription(subscriptionBody);
-
-    if (!subscriptionResult.subscription) {
-      console.error("❌ [POST] Subscription failed:", subscriptionResult);
-      return NextResponse.json({ error: "Subscription failed." }, { status: 500 });
-    }
-
-    console.log("✅ [POST] Subscription successful:", subscriptionResult.subscription);
-
-    // ✅ Store active subscription in DB
-    await db.dbUsers().updateOne(
-      { userID },
-      { $set: { membership: { id: planVariationId, status: "active" } } }
-    );
-
-    return NextResponse.json(
-      { message: "Subscription successful!", membership: { id: planVariationId, status: "active" } },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("❌ [POST] Error subscribing user:", error);
-    return NextResponse.json({ error: "Failed to subscribe." }, { status: 500 });
   }
 }
 

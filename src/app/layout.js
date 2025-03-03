@@ -14,6 +14,8 @@ import { SessionProvider } from "next-auth/react";
 import theme from "../../theme";
 import { auth } from "../../auth";
 import { signIn, signOut } from "next-auth/react";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import "./globals.css"; // Import the global CSS file
 
 // ✅ Updated icons for better visual clarity
 const getClientNavigation = (userID) => [
@@ -27,12 +29,6 @@ const getClientNavigation = (userID) => [
         title: 'Profile',
         icon: <BuildIcon />,
     },
-    {
-        segment: `dashboard/${userID}/membership`,
-        title: 'Membership',
-        icon: <AssignmentIcon />,
-    },
-    
 ];
 
 const NAVIGATION = {
@@ -48,16 +44,16 @@ const NAVIGATION = {
             icon: <BarChartIcon />
         },
         {
-          segment: 'dashboard/members',
-          title: 'Members',
-          icon: <PeopleIcon />
+            segment: 'dashboard/members',
+            title: 'Members',
+            icon: <PeopleIcon />
         }
-        
+
     ]
 };
 
 const BRANDING = {
-    logo: <img src='/logos/lightLogo.png' alt="[efd] Logo" style={{ maxWidth: '150px', height: 'auto' }} />,
+    logo: <img src='/logos/darkLogo.png' alt="[efd] Logo" style={{ maxWidth: '150px', height: 'auto' }} />,
     title: '',
 };
 
@@ -82,6 +78,7 @@ export default async function RootLayout({ children }) {
         <html lang="en">
             <body>
                 <SessionProvider session={session}>
+                    <ThemeProvider theme={theme}>
                         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
                             <AppProvider
                                 session={session}
@@ -90,9 +87,11 @@ export default async function RootLayout({ children }) {
                                 authentication={AUTHENTICATION}
                                 theme={theme}
                             >
+                                <CssBaseline />
                                 {children}
                             </AppProvider>
                         </AppRouterCacheProvider>
+                    </ThemeProvider>
                 </SessionProvider>
             </body>
         </html>

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Box, TextField, FormControl, InputLabel, MenuItem, Select, Grid, Typography } from '@mui/material';
+import { Box, TextField, Grid, useTheme } from '@mui/material';
 
 const roles = ["admin", "client", "wholesaler"];
 
 const UserDetailsForm = ({ user, onEdit }) => {
+    const theme = useTheme();
+
     return (
-        <Box sx={{ flex: 1, padding: 3 }}>
+        <Box sx={{ flex: 1, padding: 3, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
             {/* Grid layout for better spacing and structure */}
             <Grid container spacing={2}>
 
@@ -30,6 +32,16 @@ const UserDetailsForm = ({ user, onEdit }) => {
                             />
                         </Grid>
 
+                        {/* Username Field */}
+                        <Grid item xs={12}>
+                            <TextField
+                                label="@"
+                                value={user.username || ''}
+                                onChange={(e) => onEdit("username", e.target.value)}
+                                fullWidth
+                            />
+                        </Grid>
+
                         {/* Contact Information */}
                         <Grid item xs={6}>
                             <TextField
@@ -44,48 +56,6 @@ const UserDetailsForm = ({ user, onEdit }) => {
                                 label="Phone Number"
                                 value={user.phoneNumber || ''}
                                 onChange={(e) => onEdit("phoneNumber", e.target.value)}
-                                fullWidth
-                            />
-                        </Grid>
-
-                        {/* Address Section */}
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Street"
-                                value={user.address?.street || ''}
-                                onChange={(e) => onEdit("address.street", e.target.value)}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                label="City"
-                                value={user.address?.city || ''}
-                                onChange={(e) => onEdit("address.city", e.target.value)}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                label="State"
-                                value={user.address?.state || ''}
-                                onChange={(e) => onEdit("address.state", e.target.value)}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                label="Zip Code"
-                                value={user.address?.zip || ''}
-                                onChange={(e) => onEdit("address.zip", e.target.value)}
-                                fullWidth
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Country"
-                                value={user.address?.country || ''}
-                                onChange={(e) => onEdit("address.country", e.target.value)}
                                 fullWidth
                             />
                         </Grid>

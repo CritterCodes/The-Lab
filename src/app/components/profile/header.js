@@ -36,8 +36,6 @@ const UserHeader = ({ onSave, hasChanges, user, activeTab, setActiveTab }) => {
             <Tabs value={activeTab} onChange={handleTabChange}>
                 <Tab label="User Details" />
                 <Tab label="Membership" />
-                <Tab label="Profile" />
-                <Tab label="Settings" />
             </Tabs>
 
             {/* Three Dots for Actions Section */}
