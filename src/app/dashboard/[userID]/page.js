@@ -39,6 +39,8 @@ const DashboardPage = () => {
     router.push(path);
   };
 
+  const displayName = session?.user?.username || session?.user?.name || "User";
+
   return (
     <Box
       sx={{
@@ -61,7 +63,7 @@ const DashboardPage = () => {
         }}
       >
         <Typography variant="h4" component="h1">
-          Welcome, {session?.user?.name || "User"}!
+          Welcome, {displayName}!
         </Typography>
       </Box>
 

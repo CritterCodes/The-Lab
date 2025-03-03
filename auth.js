@@ -153,6 +153,7 @@ const providers = [
                     return {
                         userID: user.userID,
                         name: `${user.firstName} ${user.lastName}`,
+                        username: user.username,
                         email: user.email,
                         role: user.role,
                         token: user.token,
