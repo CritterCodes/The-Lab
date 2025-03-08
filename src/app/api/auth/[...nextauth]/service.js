@@ -12,28 +12,35 @@ const JWT_EXPIRATION = '7d'; // Token expiration for JWT tokens
 
 export default class AuthService {
 
+    // New helper to hash emails securely
+    static hashEmail(email) {
+        return crypto.createHash('sha256').update(email).digest('hex');
+    }
+
     /**
      * ✅ Register a new user with email and password
      * - Called during manual sign-up
      */
     static async register(userData) {
         const { firstName, lastName, username, email, password, phoneNumber, status } = userData; // added username
+        const plainEmail = email;
+        const hashedEmail = this.hashEmail(email);
         console.log(userData);
         console.log('looking for user');
-        const existingUser = await UserModel.findByEmail(email);
+        const existingUser = await UserModel.findByEmail(hashedEmail);
         console.log(existingUser);
         if (existingUser) {
             throw new Error("User already exists with this email.");
         };
         console.log('hashing password');
         const hashedPassword = password ? await bcrypt.hash(password, 10) : 'no password';
-        console.log('creating new user with:', firstName, lastName, email, hashedPassword, phoneNumber, status);
+        console.log('creating new user with:', firstName, lastName, hashedEmail, hashedPassword, phoneNumber, status);
         
         const newUser = new User(
             firstName,
             lastName,
             username, // new argument
-            email,
+            hashedEmail, // store hashed email
             hashedPassword,
             phoneNumber ? phoneNumber : '',
             'client',
@@ -45,7 +52,7 @@ export default class AuthService {
 
         // ✅ Send the verification email using the email utility
         if (userData.status === 'unverified') {
-            await sendVerificationEmail(email, newUser.verificationToken);
+            await sendVerificationEmail(plainEmail, newUser.verificationToken);
         };
         return results;
     }
@@ -55,7 +62,8 @@ export default class AuthService {
      * - Called in CredentialsProvider flow of NextAuth
      */
     static async login(email, password) {
-        const user = await UserModel.findByEmail(email);
+        const hashedEmail = this.hashEmail(email);
+        const user = await UserModel.findByEmail(hashedEmail);
         if (!user) {
             throw new Error("User not found.");
         }
@@ -83,7 +91,7 @@ export default class AuthService {
             userID: user.userID,
             firstName: user.firstName,
             lastName: user.lastName,
-            email: user.email,
+            email: hashedEmail,
             role: user.role,
             image: user.image
         };
@@ -95,7 +103,8 @@ export default class AuthService {
      * - Called when logging in through GoogleProvider in NextAuth
      */
     static async googleAuth({ email, name, image }) {
-        let user = await UserModel.findByEmail(email);
+        const hashedEmail = this.hashEmail(email);
+        let user = await UserModel.findByEmail(hashedEmail);
 
         if (!user) {
             const [firstName, lastName] = name.split(' ');
@@ -103,7 +112,7 @@ export default class AuthService {
             user = await UserModel.create({
                 firstName,
                 lastName,
-                email,
+                email: hashedEmail, // store hashed email
                 image,
                 role: 'client',
                 status: 'verified'
@@ -138,7 +147,8 @@ export default class AuthService {
      * ✅ Resend the verification email for unverified users
      */
     static async resendVerification(email) {
-        const user = await UserModel.findByEmail(email);
+        const hashedEmail = this.hashEmail(email);
+        const user = await UserModel.findByEmail(hashedEmail);
         if (!user) {
             throw new Error("User not found.");
         }
@@ -160,7 +170,8 @@ export default class AuthService {
      * - Creates an unverified client and sends an invite email
      */
     static async inviteClient({ firstName, lastName, email }) {
-        const existingUser = await UserModel.findByEmail(email);
+        const hashedEmail = this.hashEmail(email);
+        const existingUser = await UserModel.findByEmail(hashedEmail);
         if (existingUser) {
             throw new Error("A user with this email already exists.");
         }
@@ -170,7 +181,7 @@ export default class AuthService {
         const newUser = await UserModel.create({
             firstName,
             lastName,
-            email,
+            email: hashedEmail, // store hashed email
             role: 'client',
             status: 'unverified',
             verificationToken

@@ -14,7 +14,6 @@ export default class User {
         password, 
         phoneNumber,
         role,
-        business,
         status
     ) {
         this.userID = `user-${uuidv4().slice(0, 8)}`;
@@ -26,13 +25,10 @@ export default class User {
         this.address = {};
         this.image = '';
         this.role = role;
-        this.business = business;
         this.status = status ? status : 'unverified';
         this.password = password;
         this.createdAt = new Date();
         this.updatedAt = new Date();
-        this.appointments = [];
-        this.jewelry = [];
         this.verificationToken = this.generateVerificationToken();
     }
 

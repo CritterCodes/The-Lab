@@ -12,17 +12,22 @@ const HeroSection = () => {
   const typingSpeed = 100; // Adjust typing speed here
 
   useEffect(() => {
-    let index = 0;
-    const interval = setInterval(() => {
-      if (index < fullText.length) {
-        console.log(`Index ${index}, char: "${fullText[index]}"`);
-        setText((prev) => prev + fullText[index]);
-        index++;
+    // Reset text when component mounts
+    setText("");
+    
+    const characters = fullText.split("");
+    let currentIndex = 0;
+    
+    const typingInterval = setInterval(() => {
+      if (currentIndex < characters.length) {
+        setText(prevText => prevText + characters[currentIndex]);
+        currentIndex++;
       } else {
-        clearInterval(interval);
+        clearInterval(typingInterval);
       }
     }, typingSpeed);
-    return () => clearInterval(interval);
+    
+    return () => clearInterval(typingInterval);
   }, []);
 
   return (
