@@ -22,10 +22,12 @@ export async function sendVerificationEmail(email, token) {
         to: email,
         subject: 'Verify Your Email Address',
         html: `
-            <h2>Thanks for joining the Lab Rat Army!</h2>
-            <p>Please verify your email address by clicking the link below:</p>
-            <a href="${verificationLink}" target="_blank">Verify Email</a>
-            <p>If you did not sign up, you can safely ignore this message.</p>
+            <div style="font-family: 'Roboto Mono', monospace; background-color: #000000; color: #00ff00; padding: 20px; border-radius: 8px;">
+                <h2 style="color: #00ff00;">Thanks for joining the Lab Rat Army!</h2>
+                <p>Please verify your email address by clicking the link below:</p>
+                <a href="${verificationLink}" target="_blank" style="color: #00ff00; text-decoration: none; border: 1px solid #00ff00; padding: 10px 20px; border-radius: 8px;">Verify Email</a>
+                <p>If you did not sign up, you can safely ignore this message.</p>
+            </div>
         `
     };
 
@@ -54,10 +56,12 @@ export async function sendPasswordResetEmail(email, token) {
         to: email,
         subject: 'Password Reset Request',
         html: `
-            <h2>Password Reset Request</h2>
-            <p>Click the link below to reset your password:</p>
-            <a href="${resetLink}" target="_blank">Reset Password</a>
-            <p>If you did not request a password reset, please ignore this message.</p>
+            <div style="font-family: 'Roboto Mono', monospace; background-color: #000000; color: #00ff00; padding: 20px; border-radius: 8px;">
+                <h2 style="color: #00ff00;">Password Reset Request</h2>
+                <p>Click the link below to reset your password:</p>
+                <a href="${resetLink}" target="_blank" style="color: #00ff00; text-decoration: none; border: 1px solid #00ff00; padding: 10px 20px; border-radius: 8px;">Reset Password</a>
+                <p>If you did not request a password reset, please ignore this message.</p>
+            </div>
         `
     };
 

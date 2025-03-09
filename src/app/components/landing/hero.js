@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 const HeroSection = () => {
   const theme = useTheme();
   const [text, setText] = useState("");
-  const fullText = "Unleash Your Creativity";
+  const fullText = "U nleash Your Creativity";
   const typingSpeed = 100; // Adjust typing speed here
 
   useEffect(() => {
@@ -19,7 +19,7 @@ const HeroSection = () => {
     let currentIndex = 0;
     
     const typingInterval = setInterval(() => {
-      if (currentIndex < characters.length) {
+      if (currentIndex < characters.length - 1) {
         setText(prevText => prevText + characters[currentIndex]);
         currentIndex++;
       } else {
