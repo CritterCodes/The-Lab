@@ -2,6 +2,7 @@
 
 import User from "./class";
 import UserModel from "./model";
+import AuthService from '../../auth/[...nextauth]/service.js';
 
 export default class UserService {
     /**
@@ -11,6 +12,9 @@ export default class UserService {
      */
     static createUser = async (userData) => {
         try {
+            // Encrypt email and phone before creating a new user
+            if(userData.email) userData.email = AuthService.encryptEmail(userData.email);
+            if(userData.phoneNumber) userData.phoneNumber = AuthService.encryptPhone(userData.phoneNumber);
             userData.password = '';
             // Validate the required fields through the User class
             const newUser = new User(
@@ -37,9 +41,13 @@ export default class UserService {
      */
     static getUserByQuery = async (query) => {
         try {
+            // Encrypt email in query if present
+            if(query.email) query.email = AuthService.encryptEmail(query.email);
             console.log("🔍 Fetching user in UserService for query:", query);
             const user = await UserModel.getUserByQuery(query); 
             if (user) {
+                user.email = AuthService.decryptEmail(user.email);
+                if(user.phoneNumber) user.phoneNumber = AuthService.decryptPhone(user.phoneNumber);
                 console.log("✅ User found in service:", user);
             } else {
                 console.warn("⚠️ No user found in service.");
@@ -60,7 +68,13 @@ export default class UserService {
     static getAllUsers = async () => {
         try {
             const users = await UserModel.getAllUsers();
-            return users;
+            const decryptedUsers = users.map(user => {
+                // Decrypt fields for each user
+                user.email = AuthService.decryptEmail(user.email);
+                if(user.phoneNumber) user.phoneNumber = AuthService.decryptPhone(user.phoneNumber);
+                return user;
+            });
+            return decryptedUsers;
         } catch (error) {
             console.error("Error in UserService.getAllUsers:", error);
             throw new Error("Failed to fetch all users.");
@@ -75,7 +89,14 @@ export default class UserService {
      */
     static updateUser = async (query, updateData) => {
         try {
+            // Encrypt email and phone in updateData if present
+            if(updateData.email) updateData.email = AuthService.encryptEmail(updateData.email);
+            if(updateData.phoneNumber) updateData.phoneNumber = AuthService.encryptPhone(updateData.phoneNumber);
             const updatedUser = await UserModel.updateUser(query, updateData);
+            if(updatedUser) {
+                updatedUser.email = AuthService.decryptEmail(updatedUser.email);
+                if(updatedUser.phoneNumber) updatedUser.phoneNumber = AuthService.decryptPhone(updatedUser.phoneNumber);
+            }
             return updatedUser;
         } catch (error) {
             console.error("Error in UserService.updateUser:", error);

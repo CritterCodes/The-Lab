@@ -2,19 +2,52 @@
 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto, { hash } from 'crypto';
+import crypto from 'crypto';
 import User from '../../v1/users/class';
 import UserModel from './model';
 import { sendVerificationEmail, sendInviteEmail } from '@/app/utils/email.util.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRATION = '7d'; // Token expiration for JWT tokens
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default_key_32charslong____'; // Must be 32 bytes
+const IV_LENGTH = 16; // 16 bytes for AES
 
 export default class AuthService {
 
-    // New helper to hash emails securely
-    static hashEmail(email) {
-        return crypto.createHash('sha256').update(email).digest('hex');
+    // New deterministic encryption for emails
+    static encryptEmail(email) {
+        if (!email) return '';
+        const key = Buffer.from(ENCRYPTION_KEY);
+        const iv = Buffer.alloc(IV_LENGTH, 0); // deterministic IV
+        const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+        return cipher.update(email, 'utf8', 'hex') + cipher.final('hex');
+    }
+
+    // New deterministic decryption for emails
+    static decryptEmail(encryptedEmail) {
+        if (!encryptedEmail) return '';
+        const key = Buffer.from(ENCRYPTION_KEY);
+        const iv = Buffer.alloc(IV_LENGTH, 0);
+        const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+        return decipher.update(encryptedEmail, 'hex', 'utf8') + decipher.final('utf8');
+    }
+
+    // New deterministic encryption for phone numbers
+    static encryptPhone(phoneNumber) {
+        if (!phoneNumber) return '';
+        const key = Buffer.from(ENCRYPTION_KEY);
+        const iv = Buffer.alloc(IV_LENGTH, 0);
+        const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+        return cipher.update(phoneNumber, 'utf8', 'hex') + cipher.final('hex');
+    }
+
+    // New deterministic decryption for phone numbers
+    static decryptPhone(encryptedPhone) {
+        if (!encryptedPhone) return '';
+        const key = Buffer.from(ENCRYPTION_KEY);
+        const iv = Buffer.alloc(IV_LENGTH, 0);
+        const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+        return decipher.update(encryptedPhone, 'hex', 'utf8') + decipher.final('utf8');
     }
 
     /**
@@ -24,25 +57,26 @@ export default class AuthService {
     static async register(userData) {
         const { firstName, lastName, username, email, password, phoneNumber, status } = userData; // added username
         const plainEmail = email;
-        const hashedEmail = this.hashEmail(email);
+        const encryptedEmail = this.encryptEmail(email);
+        const encryptedPhone = phoneNumber ? this.encryptPhone(phoneNumber) : '';
         console.log(userData);
         console.log('looking for user');
-        const existingUser = await UserModel.findByEmail(hashedEmail);
+        const existingUser = await UserModel.findByEmail(encryptedEmail);
         console.log(existingUser);
         if (existingUser) {
             throw new Error("User already exists with this email.");
         };
         console.log('hashing password');
         const hashedPassword = password ? await bcrypt.hash(password, 10) : 'no password';
-        console.log('creating new user with:', firstName, lastName, hashedEmail, hashedPassword, phoneNumber, status);
+        console.log('creating new user with:', firstName, lastName, encryptedEmail, hashedPassword, encryptedPhone, status);
         
         const newUser = new User(
             firstName,
             lastName,
             username, // new argument
-            hashedEmail, // store hashed email
+            encryptedEmail, // store encrypted email
             hashedPassword,
-            phoneNumber ? phoneNumber : '',
+            phoneNumber ? encryptedPhone : '', // store encrypted phone number
             'client',
             status
         );
@@ -62,8 +96,8 @@ export default class AuthService {
      * - Called in CredentialsProvider flow of NextAuth
      */
     static async login(email, password) {
-        const hashedEmail = this.hashEmail(email);
-        const user = await UserModel.findByEmail(hashedEmail);
+        const encryptedEmail = this.encryptEmail(email);
+        const user = await UserModel.findByEmail(encryptedEmail);
         if (!user) {
             throw new Error("User not found.");
         }
@@ -91,7 +125,7 @@ export default class AuthService {
             userID: user.userID,
             firstName: user.firstName,
             lastName: user.lastName,
-            email: hashedEmail,
+            email: this.decryptEmail(user.email), // return decrypted email
             role: user.role,
             image: user.image
         };
@@ -103,8 +137,8 @@ export default class AuthService {
      * - Called when logging in through GoogleProvider in NextAuth
      */
     static async googleAuth({ email, name, image }) {
-        const hashedEmail = this.hashEmail(email);
-        let user = await UserModel.findByEmail(hashedEmail);
+        const encryptedEmail = this.encryptEmail(email);
+        let user = await UserModel.findByEmail(encryptedEmail);
 
         if (!user) {
             const [firstName, lastName] = name.split(' ');
@@ -112,7 +146,7 @@ export default class AuthService {
             user = await UserModel.create({
                 firstName,
                 lastName,
-                email: hashedEmail, // store hashed email
+                email: encryptedEmail, // store encrypted email
                 image,
                 role: 'client',
                 status: 'verified'
@@ -147,8 +181,8 @@ export default class AuthService {
      * ✅ Resend the verification email for unverified users
      */
     static async resendVerification(email) {
-        const hashedEmail = this.hashEmail(email);
-        const user = await UserModel.findByEmail(hashedEmail);
+        const encryptedEmail = this.encryptEmail(email);
+        const user = await UserModel.findByEmail(encryptedEmail);
         if (!user) {
             throw new Error("User not found.");
         }
@@ -170,8 +204,8 @@ export default class AuthService {
      * - Creates an unverified client and sends an invite email
      */
     static async inviteClient({ firstName, lastName, email }) {
-        const hashedEmail = this.hashEmail(email);
-        const existingUser = await UserModel.findByEmail(hashedEmail);
+        const encryptedEmail = this.encryptEmail(email);
+        const existingUser = await UserModel.findByEmail(encryptedEmail);
         if (existingUser) {
             throw new Error("A user with this email already exists.");
         }
@@ -181,7 +215,7 @@ export default class AuthService {
         const newUser = await UserModel.create({
             firstName,
             lastName,
-            email: hashedEmail, // store hashed email
+            email: encryptedEmail, // store encrypted email
             role: 'client',
             status: 'unverified',
             verificationToken
