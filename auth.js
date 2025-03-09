@@ -19,7 +19,7 @@ const providers = [
                     method: "GET",
                     headers: { "Content-Type": "application/json" }
                 });
-                
+
                 const existingUser = await response.json();
                 console.log("Existing User:", existingUser);
 
@@ -75,18 +75,18 @@ const providers = [
         clientId: process.env.DISCORD_CLIENT_ID,
         clientSecret: process.env.DISCORD_CLIENT_SECRET,
         async profile(profile) {
-            console.log("Google Profile:", profile);
+            console.log("Discord Profile:", profile);
 
             // ✅ Check if user exists in the database
-            const response = await fetch(`${baseURL}/api/v1/users?query=${profile.email}`, {
+            const response = await fetch(`${baseURL}/api/v1/users?email=${profile.email}`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json" }
             });
-            
+
             const existingUser = await response.json();
             console.log("Existing User:", existingUser);
 
-            
+
             if (!response.ok || existingUser.length === 0) {
                 // ✅ Create the user if not found
                 const createResponse = await fetch(`${baseURL}/api/auth/register`, {
@@ -118,16 +118,16 @@ const providers = [
                 };
             }
 
-                // ✅ Return existing user data
-                const user = existingUser.user;
-                return {
-                    userID: user.userID,
-                    name: `${user.firstName} ${user.lastName}`,
-                    username: user.username,
-                    email: user.email,
-                    role: user.role,
-                    image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
-                };
+            // ✅ Return existing user data
+            const user = existingUser.users[0];
+            return {
+                userID: user.userID,
+                name: `${user.firstName} ${user.lastName}`,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
+            };
         }
     }),
     CredentialsProvider({

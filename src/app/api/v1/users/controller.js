@@ -40,17 +40,25 @@ export default class UserController {
         try {
             console.log("🔍 Received request for getUserByQuery:", req.url);
             const { searchParams } = new URL(req.url);
-            const query = searchParams.get("query");
-    
-            if (!query) {
+            const query = {};
+
+            // Extract all possible query parameters
+            ['email', 'username', 'userID', 'phoneNumber', 'firstName', 'lastName'].forEach(param => {
+                const value = searchParams.get(param);
+                if (value) {
+                    query[param] = value;
+                }
+            });
+
+            if (Object.keys(query).length === 0) {
                 console.warn("⚠️ Query parameter missing in request.");
                 return new Response(
-                    JSON.stringify({ error: "Query parameter is required." }),
+                    JSON.stringify({ error: "At least one query parameter is required." }),
                     { status: 400 }
                 );
             }
-    
-            console.log("✅ Query parameter received:", query);
+
+            console.log("✅ Query parameters received:", query);
             const user = await UserService.getUserByQuery(query);
             
             if (!user) {
@@ -60,7 +68,7 @@ export default class UserController {
                     { status: 404 }
                 );
             }
-    
+
             console.log("✅ User found:", user);
             return new Response(
                 JSON.stringify({ user }),

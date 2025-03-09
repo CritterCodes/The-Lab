@@ -3,7 +3,7 @@ import { Box, IconButton, Menu, MenuItem, Tabs, Tab } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import UsersService from '@/services/users'; 
 
-const UserHeader = ({ onSave, hasChanges, user, activeTab, setActiveTab }) => {
+const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab }) => {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
 
@@ -13,16 +13,6 @@ const UserHeader = ({ onSave, hasChanges, user, activeTab, setActiveTab }) => {
 
     const handleClose = () => {
         setAnchorEl(null);
-    };
-
-    const handleInvite = async () => {
-        try {
-            await UsersService.sendInvite(user.email);
-            alert(`✅ Invite sent to ${user.email}`);
-        } catch (error) {
-            alert(`❌ Failed to send invite: ${error.message}`);
-        }
-        handleClose();
     };
 
     const handleTabChange = (event, newValue) => {
@@ -50,12 +40,6 @@ const UserHeader = ({ onSave, hasChanges, user, activeTab, setActiveTab }) => {
                     Save Changes
                 </MenuItem>
                 
-                {/* Invite User Option - Only if the user is not verified */}
-                {user.status !== "verified" && (
-                    <MenuItem onClick={handleInvite}>
-                        Invite User
-                    </MenuItem>
-                )}
             </Menu>
         </Box>
     );

@@ -34,17 +34,11 @@ export default class UserModel {
         try {
             const dbUsers = await db.dbUsers();
             console.log("🔍 Searching user in the database with query:", query);
-    
+
             const user = await dbUsers.findOne({
-                $or: [
-                    { firstName: { $regex: query, $options: "i" } },
-                    { lastName: { $regex: query, $options: "i" } },
-                    { email: { $regex: query, $options: "i" } },
-                    { phoneNumber: { $regex: query, $options: "i" } },
-                    { userID: { $regex: query, $options: "i" } }
-                ]
+                $or: Object.keys(query).map(key => ({ [key]: { $regex: query[key], $options: "i" } }))
             });
-    
+
             if (!user) {
                 console.warn("⚠️ No user found in database for query:", query);
             } else {

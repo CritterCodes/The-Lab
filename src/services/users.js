@@ -26,7 +26,8 @@ class UsersService {
      */
     static getUserByQuery = async (query) => {
         try {
-            const response = await axiosInstance.get(`/users?query=${query}`);
+            console.log("🔍 Fetching user by query:", query);
+            const response = await axiosInstance.get(`/users?${query.property}=${query.value}`);
             return response.data.user;
         } catch (error) {
             console.error("❌ Error fetching user by query:", error);

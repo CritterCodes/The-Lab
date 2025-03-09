@@ -15,7 +15,10 @@ export async function POST(req) {
  */
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
-    if (searchParams.get("query")) {
+    const queryParams = ['email', 'username', 'userID', 'phoneNumber', 'firstName', 'lastName'];
+    const hasQuery = queryParams.some(param => searchParams.get(param));
+
+    if (hasQuery) {
         return await UserController.getUserByQuery(req);
     } else {
         return await UserController.getAllUsers(req);

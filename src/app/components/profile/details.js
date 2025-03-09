@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, TextField, Grid, useTheme } from '@mui/material';
 
 const roles = ["admin", "client", "wholesaler"];
 
 const UserDetailsForm = ({ user, onEdit }) => {
+
     const theme = useTheme();
+
+    useEffect(() => {
+        console.log("User: ", user);
+    }, [user]);
 
     return (
         <Box sx={{ flex: 1, padding: 3, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>

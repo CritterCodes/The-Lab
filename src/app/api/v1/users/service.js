@@ -42,12 +42,12 @@ export default class UserService {
     static getUserByQuery = async (query) => {
         try {
             // Encrypt email in query if present
-            if(query.email) query.email = AuthService.encryptEmail(query.email);
+            if (query.email) query.email = AuthService.encryptEmail(query.email);
             console.log("🔍 Fetching user in UserService for query:", query);
             const user = await UserModel.getUserByQuery(query); 
             if (user) {
                 user.email = AuthService.decryptEmail(user.email);
-                if(user.phoneNumber) user.phoneNumber = AuthService.decryptPhone(user.phoneNumber);
+                if (user.phoneNumber) user.phoneNumber = AuthService.decryptPhone(user.phoneNumber);
                 console.log("✅ User found in service:", user);
             } else {
                 console.warn("⚠️ No user found in service.");

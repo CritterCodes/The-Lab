@@ -41,7 +41,12 @@ const ViewUserPage = ({ params }) => {
         const fetchUser = async () => {
             if (userID) {
                 try {
-                    const fetchedUser = await UsersService.getUserByQuery(userID);
+                    console.log("🔍 Fetching User Data for ID:", userID);
+                    const query = {
+                        property: 'userID',
+                        value: userID
+                    }
+                    const fetchedUser = await UsersService.getUserByQuery(query);
                     console.log("✅ Fetched User Data:", fetchedUser);
                     setUser(fetchedUser);
                     setUpdatedUser(fetchedUser);
