@@ -1,5 +1,5 @@
 import express from "express";
-import { handleSquareWebhook } from "./squareWebhook.controller.js";
+import { handleSquareWebhook } from "./controller";
 
 const router = express.Router();
 
