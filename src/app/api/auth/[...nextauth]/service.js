@@ -77,7 +77,7 @@ export default class AuthService {
             encryptedEmail, // store encrypted email
             hashedPassword,
             phoneNumber ? encryptedPhone : '', // store encrypted phone number
-            'client',
+            'user', // default role
             status
         );
         console.log("newUser", newUser);
@@ -85,7 +85,10 @@ export default class AuthService {
         const results = await UserModel.create(newUser);
 
         // ✅ Send the verification email using the email utility
-        if (userData.status === 'unverified') {
+        console.log("user status", newUser.status);
+        if (newUser.status === 'unverified') {
+            // Added logging before sending email
+            console.log("Attempting to send verification email to:", plainEmail, "with token:", newUser.verificationToken);
             await sendVerificationEmail(plainEmail, newUser.verificationToken);
         };
         return results;
@@ -172,7 +175,7 @@ export default class AuthService {
 
         user.status = 'verified';
         user.verificationToken = null;
-        await user.save();
+        await UserModel.updateById(user.userID, user);
 
         return { message: "Email successfully verified." };
     }
@@ -186,45 +189,19 @@ export default class AuthService {
         if (!user) {
             throw new Error("User not found.");
         }
-
         if (user.status === 'verified') {
             throw new Error("User is already verified.");
         }
-
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        user.verificationToken = verificationToken;
+        // Use user's generateVerificationToken method if available; else generate JWT token matching User class
+        user.verificationToken = user.generateVerificationToken
+            ? user.generateVerificationToken()
+            : jwt.sign(
+                { email: this.decryptEmail(user.email), userID: user.userID },
+                process.env.JWT_SECRET,
+                { expiresIn: '15m' }
+              );
         await user.save();
-
-        // ✅ Resend the verification email
-        await sendVerificationEmail(email, verificationToken);
-    }
-
-    /**
-     * ✅ Invite a new client created by an admin
-     * - Creates an unverified client and sends an invite email
-     */
-    static async inviteClient({ firstName, lastName, email }) {
-        const encryptedEmail = this.encryptEmail(email);
-        const existingUser = await UserModel.findByEmail(encryptedEmail);
-        if (existingUser) {
-            throw new Error("A user with this email already exists.");
-        }
-
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-
-        const newUser = await UserModel.create({
-            firstName,
-            lastName,
-            email: encryptedEmail, // store encrypted email
-            role: 'client',
-            status: 'unverified',
-            verificationToken
-        });
-
-        // ✅ Send the invite email with the verification link
-        await sendInviteEmail(email, verificationToken, firstName);
-
-        return newUser;
+        await sendVerificationEmail(email, user.verificationToken);
     }
 
     /**

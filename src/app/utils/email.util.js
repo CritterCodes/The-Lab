@@ -15,19 +15,22 @@ const transporter = nodemailer.createTransport({
  * @param {string} token - The verification token
  */
 export async function sendVerificationEmail(email, token) {
-    const verificationLink = `${process.env.APP_URL}/verify-email?token=${token}`;
+    const verificationLink = `${process.env.NEXT_PUBLIC_URL}/auth/verify-email?token=${token}`;
 
     const mailOptions = {
-        from: `"Your App Name" <${process.env.EMAIL_USER}>`,
+        from: `"The Lab" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Verify Your Email Address',
         html: `
-            <h2>Welcome to Our App!</h2>
-            <p>Thank you for signing up. Please verify your email address by clicking the link below:</p>
+            <h2>Thanks for joining the Lab Rat Army!</h2>
+            <p>Please verify your email address by clicking the link below:</p>
             <a href="${verificationLink}" target="_blank">Verify Email</a>
             <p>If you did not sign up, you can safely ignore this message.</p>
         `
     };
+
+    // Added logging for email details
+    console.log("Sending verification email with options:", mailOptions);
 
     try {
         const info = await transporter.sendMail(mailOptions);
@@ -47,7 +50,7 @@ export async function sendPasswordResetEmail(email, token) {
     const resetLink = `${process.env.APP_URL}/reset-password?token=${token}`;
 
     const mailOptions = {
-        from: `"Your App Name" <${process.env.EMAIL_USER}>`,
+        from: `"The Lab" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Password Reset Request',
         html: `
@@ -73,26 +76,4 @@ export async function sendPasswordResetEmail(email, token) {
  * @param {string} token - The invitation token
  * @param {string} firstName - The invited user's first name
  */
-export async function sendInviteEmail(email, token, firstName) {
-    const inviteLink = `${process.env.APP_URL}/complete-signup?token=${token}`;
 
-    const mailOptions = {
-        from: `"Your App Name" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'You’ve Been Invited to Join Our Platform!',
-        html: `
-            <h2>Hello ${firstName}!</h2>
-            <p>You have been invited to join our platform. Click the link below to finish creating your account:</p>
-            <a href="${inviteLink}" target="_blank">Complete Your Signup</a>
-            <p>If you were not expecting this invitation, you can safely ignore this email.</p>
-        `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Invite email sent:', info.response);
-    } catch (error) {
-        console.error('Error sending invite email:', error);
-        throw new Error('Failed to send invite email');
-    }
-}

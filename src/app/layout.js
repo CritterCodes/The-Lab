@@ -18,7 +18,7 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import "./globals.css"; // Import the global CSS file
 
 // ✅ Updated icons for better visual clarity
-const getClientNavigation = (userID) => [
+const getUserNavigation = (userID) => [
     {
         segment: `dashboard/${userID}`,
         title: 'Dashboard',
@@ -71,9 +71,9 @@ export default async function RootLayout({ children }) {
         console.log("No session data or user found");
     }
 
-    const userRole = session?.user?.role || "client";
+    const userRole = session?.user?.role || "user";
     const userID = session?.user?.userID;
-    const userNavigation = userRole === "client" ? getClientNavigation(userID) : NAVIGATION.admin;
+    const userNavigation = userRole === "user" ? getUserNavigation(userID) : NAVIGATION.admin;
     return (
         <html lang="en">
             <body>

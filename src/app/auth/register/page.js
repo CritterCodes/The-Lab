@@ -35,8 +35,8 @@ const RegisterPage = () => {
       });
 
       if (res.ok) {
-        // Redirect to sign-in page after successful credentials registration
-        window.location.href = "/auth/signin";
+        // Redirect to verify-email page after registration
+        window.location.href = "/auth/verify-email?registered=true";
       } else {
         const errorData = await res.json();
         setError(errorData.message || "Registration failed.");

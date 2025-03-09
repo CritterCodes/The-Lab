@@ -52,7 +52,7 @@ export default class UserModel {
      * @param {Object} updateData
      * @returns {boolean} - Whether the update was successful
      */
-    static async updateById(userID, updateData) {
+    static updateById = async (userID, updateData) => {
         const dbInstance = await db.connect();
         const result = await dbInstance.collection("users").updateOne(
             { userID },
