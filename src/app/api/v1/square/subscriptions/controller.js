@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import UserModel from "../../users/model";
+import { Client, Environment } from "square"; // ...new import...
 
 // Load environment variables
 const SQUARE_SUB_SIGKEY = process.env.SQUARE_SUB_SIGKEY;
@@ -34,13 +35,26 @@ export async function handleSquareWebhook(req, res) {
         console.log("📦 Webhook Data:", data);
 
         if (eventType === "subscription.created" || eventType === "invoice.payment_made") {
-            const squareEmail = data.customer_email;
-            const squareCustomerId = data.customer_id;
-
-            if (!squareEmail || !squareCustomerId) {
-                console.error("❌ Missing Square email or customer ID.");
+            // Extract subscription data from payload
+            const subscription = data.subscription;
+            if (!subscription || !subscription.customer_id) {
+                console.error("❌ Missing subscription data or customer ID.");
                 return res.status(400).json({ error: "Missing customer data" });
             }
+            const squareCustomerId = subscription.customer_id;
+
+            // Use Square Node.js SDK to retrieve customer details
+            const squareClient = new Client({
+                accessToken: process.env.SQUARE_ACCESS_TOKEN,
+                environment: process.env.SQUARE_ENVIRONMENT === "production" ? Environment.Production : Environment.Sandbox,
+            });
+
+            const { result: customerResult, statusCode } = await squareClient.customersApi.retrieveCustomer(squareCustomerId);
+            if (statusCode !== 200 || !customerResult.customer || !customerResult.customer.emailAddress) {
+                console.error("❌ Failed to retrieve customer email from Square for customer ID:", squareCustomerId);
+                return res.status(400).json({ error: "Invalid customer data from Square" });
+            }
+            const squareEmail = customerResult.customer.emailAddress;
 
             // ✅ Find Lab user by email (pass as string for regex matching)
             const user = await UserModel.getUserByQuery(squareEmail);
