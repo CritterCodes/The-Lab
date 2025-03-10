@@ -25,12 +25,16 @@ export default class SubscriptionService {
         if (!customer || !customer.emailAddress) {
           throw new Error("Customer not found or missing email address in Square response.");
         }
+
+        console.log("Retrieved customer from Square:", customer);
   
         // Find the lab user with the matching email.
         const labUser = await UserService.getUserByQuery({ email: customer.emailAddress });
         if (!labUser) {
           throw new Error("No lab user found with matching email.");
         }
+        
+        console.log("Found lab user with matching email:", labUser);
   
         // Update the lab user with the Square customer_id.
         const updatedUser = await UserService.updateUser(customer.emailAddress, { squareID: customer_id });
