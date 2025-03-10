@@ -1,14 +1,13 @@
-import express from "express";
-import { handleSquareWebhook } from "./controller";
+import SubscriptionController from "./controller";
 
-const router = express.Router();
-
-router.options("/webhook", (req, res) => {
-    // Allow preflight requests
-    res.sendStatus(200);
-});
-
-// Route to handle Square Webhooks
-router.post("/webhook", express.json(), handleSquareWebhook);
-
-export default router;
+export async function POST(request) {
+  try {
+    return await SubscriptionController.handleWebhook(request);
+  } catch (error) {
+    console.error("Error in subscriptions route POST:", error);
+    return new Response(
+      JSON.stringify({ error: "An error occurred processing the webhook." }),
+      { status: 500 }
+    );
+  }
+}
