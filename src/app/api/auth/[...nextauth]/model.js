@@ -34,6 +34,16 @@ export default class UserModel {
     }
 
     /**
+     * ✅ Find user by username
+     * @param {string} username
+     * @returns {Object | null} - User object or null if not found
+     */
+    static async findByUsername(username) {
+        const dbInstance = await db.connect();
+        return await dbInstance.collection("users").findOne({ username });
+    }
+
+    /**
      * ✅ Create a new user
      * @param {Object} userData - User object data
      * @returns {Object} - The created user object

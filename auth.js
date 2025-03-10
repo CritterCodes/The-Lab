@@ -15,7 +15,7 @@ const providers = [
                 console.log("Google Profile:", profile);
 
                 // ✅ Check if user exists in the database
-                const response = await fetch(`${baseURL}/api/v1/users?query=${profile.email}`, {
+                const response = await fetch(`${baseURL}/api/v1/users?email=${profile.email}`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" }
                 });
@@ -119,7 +119,7 @@ const providers = [
             }
 
             // ✅ Return existing user data
-            const user = existingUser.users[0];
+            const user = existingUser.user;
             return {
                 userID: user.userID,
                 name: `${user.firstName} ${user.lastName}`,
@@ -132,14 +132,18 @@ const providers = [
     }),
     CredentialsProvider({
         credentials: {
-            email: { label: 'Email Address', type: 'email' },
+            identifier: { label: 'Email or Username', type: 'text' },
             password: { label: 'Password', type: 'password' }
         },
         async authorize(credentials) {
             try {
+                console.log("Credentials:", credentials);
                 const response = await fetch(`${baseURL}/api/auth/signin`, {
                     method: "POST",
-                    body: JSON.stringify(credentials),
+                    body: JSON.stringify({
+                        identifier: credentials.identifier,
+                        password: credentials.password
+                    }),
                     headers: { "Content-Type": "application/json" }
                 });
 

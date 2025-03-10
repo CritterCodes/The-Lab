@@ -1,57 +1,72 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SignInPage } from "@toolpad/core/SignInPage";
-import { Link, Snackbar, Alert, Box, useTheme } from "@mui/material";
+import { Link, Snackbar, Alert, Box, useTheme, Typography } from "@mui/material";
 import { useSearchParams } from 'next/navigation';
 import { providerMap } from "../../../../auth";
 import { signIn } from "next-auth/react";
 import { AppProvider } from "@toolpad/core/AppProvider";
-import theme from "../../../../theme"; // Import the theme
+import theme from "../../../../theme";
 
-const ForgotPasswordLink = () => {
-    return (
-        <Link href="/auth/forgot-password" underline="hover" sx={{ color: 'primary.main' }}>
-            Forgot your password?
-        </Link>
-    );
-};
+const ForgotPasswordLink = () => (
+    <Link href="/auth/forgot-password" underline="hover" sx={{ color: 'primary.main' }}>
+        Forgot password?
+    </Link>
+);
 
 const CreateAnAccount = () => {
     return (
-        <Link href="/auth/register" underline="hover" sx={{ color: 'primary.main' }}>
-            Need an account? sign up here
+        <Typography variant="body2" sx={{ color: 'primary.main' }}>
+            Need an account? 
+        <Link href="/auth/register" variant="body2">
+            Sign up
         </Link>
+        </Typography>
     );
 }
 
 const SignIn = () => {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-    const [error, setError] = useState(null);
+    const errorParam = searchParams.get('error');
     const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [error, setError] = useState("");
 
     const handleSnackbarClose = () => {
         setSnackbarOpen(false);
     };
 
+
+    const Title = () => {
+        return <h2 style={{ marginBottom: 8 }}>Login</h2>;
+    }
+
     const handleSignIn = async (provider, formData) => {
         try {
             if (provider.id === 'credentials') {
                 const response = await signIn("credentials", {
-                    redirect: true,
-                    email: formData.get('email'),
+                    redirect: false,
+                    identifier: formData.get('identifier'),
                     password: formData.get('password'),
                     callbackUrl
                 });
-                if (!response || response.error) {
-                    throw new Error("Invalid credentials. Please try again.");
+                if (response.error) {
+                    throw new Error(response.error);
                 }
+                window.location.href = response.url || callbackUrl;
                 return response;
             } else {
                 return signIn(provider.id, { callbackUrl });
             }
         } catch (error) {
-            setError(error.message || "An error occurred during sign-in.");
+            console.error("SignIn Error:", error);
+            let errorMessage = error.message || "An unknown error occurred during sign-in.";
+            // Map the generic NextAuth Credentials error to a detailed user-friendly message.
+            if (errorMessage === "CredentialsSignin") {
+                errorMessage =
+                    "Invalid credentials. Please double-check your email/username and password.";
+            }
+            setError(errorMessage);
             setSnackbarOpen(true);
         }
     };
@@ -72,10 +87,13 @@ const SignIn = () => {
                 <SignInPage
                     signIn={handleSignIn}
                     providers={providerMap}
-                    slotProps={{
+                    slots={{ // change from 'components' back to 'slots'
+                        title: Title,
                         forgotPasswordLink: ForgotPasswordLink,
-                        signUpLink: CreateAnAccount,
-                        emailField: { autoFocus: true }
+                        signUpLink: CreateAnAccount
+                    }}
+                    slotProps={{
+                        emailField: { autoFocus: true, type: 'text', label: 'Email or Username', name: 'identifier' }
                     }}
                     sx={{
                         '& .MuiBox-root': {
@@ -120,7 +138,6 @@ const SignIn = () => {
                     }}
                 />
 
-                {/* Snackbar for Error Handling */}
                 <Snackbar
                     open={snackbarOpen}
                     autoHideDuration={6000}

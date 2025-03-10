@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
     try {
-        const { email, password } = await req.json();
-        const userData = await AuthService.login(email, password);  // ✅ Now returns full user data
+        const { identifier, password } = await req.json();  
+        const userData = await AuthService.login(identifier, password);  // Now uses identifier
 
         if (!userData) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

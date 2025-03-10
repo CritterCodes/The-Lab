@@ -95,12 +95,17 @@ export default class AuthService {
     }
 
     /**
-     * ✅ Login a user with email and password
+     * ✅ Login a user with email/username and password
      * - Called in CredentialsProvider flow of NextAuth
      */
-    static async login(email, password) {
-        const encryptedEmail = this.encryptEmail(email);
-        const user = await UserModel.findByEmail(encryptedEmail);
+    static async login(identifier, password) {
+        let user;
+        if (identifier.includes('@')) {
+            const encryptedEmail = this.encryptEmail(identifier);
+            user = await UserModel.findByEmail(encryptedEmail);
+        } else {
+            user = await UserModel.findByUsername(identifier);
+        }
         if (!user) {
             throw new Error("User not found.");
         }
@@ -133,7 +138,6 @@ export default class AuthService {
             image: user.image
         };
     }
-
 
     /**
      * ✅ Google Authentication Logic
