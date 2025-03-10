@@ -1,5 +1,5 @@
 import { Client, Environment } from "square";
-import UserService from "../../../users/user.service.js";
+import UserService from "../../users/service";
 
 export default class SubscriptionService {
   static processWebhook = async (payload) => {
