@@ -1,6 +1,6 @@
 import { Client, Environment } from "square";
-import UserService from "../../../users/user.service.js";
-import AuthService from "../../../auth/[...nextauth]/service.js";
+import UserService from "../../users/service.js";
+import AuthService from "@/app/api/auth/[...nextauth]/service.js";
 
 export default class SubscriptionService {
   static processWebhook = async (payload) => {
