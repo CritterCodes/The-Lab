@@ -9,27 +9,77 @@ export default class User {
     constructor( 
         firstName, 
         lastName, 
-        username, // new parameter
+        username, 
         email, 
         password, 
         phoneNumber,
         role,
-        status
+        status,
+        provider,
+        discordHandle,
+        discordId,
+        googleId,
+        bio,
+        skills,
+        stake,
+        image
     ) {
         this.userID = `user-${uuidv4().slice(0, 8)}`;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.username = username; // save username
+        this.username = username; 
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.address = {};
-        this.image = '';
-        this.role = role;
+        this.image = image || '';
+        this.role = role || 'user';
         this.status = status ? status : 'unverified';
         this.password = password;
+        this.provider = provider || 'local';
+        this.discordHandle = discordHandle || '';
+        this.discordId = discordId || '';
+        this.googleId = googleId || '';
         this.createdAt = new Date();
         this.updatedAt = new Date();
         this.verificationToken = this.generateVerificationToken();
+        this.stake = stake || 0; // ✅ Community Involvement Score
+        
+        // ✅ Privacy Settings
+        this.privacy = {
+            showEmail: true,
+            showDiscord: true,
+            showPhone: false
+        };
+
+        // ✅ Public Profile Fields
+        this.bio = bio || '';
+        this.skills = skills || [];
+        this.socials = {
+            github: '',
+            linkedin: '',
+            twitter: '',
+            website: '',
+            instagram: ''
+        };
+        this.skills = []; // Array of strings
+        this.isPublic = false;
+
+        // ✅ Membership Tracking
+        this.membership = {
+            status: 'registered', // registered, applicant, contacted, onboarding, probation, active, suspended
+            applicationDate: null,
+            contacted: false,
+            contactDate: null,
+            onboardingComplete: false,
+            onboardingDate: null,
+            volunteerLog: [], // Array of { id, date, hours, description, verifiedBy }
+            accessKey: {
+                issued: false,
+                type: null, // 'limited', '24h'
+                issuedDate: null
+            },
+            notes: [] // Array of { date, adminId, text }
+        };
     }
 
     /**

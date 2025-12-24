@@ -55,7 +55,7 @@ export default class AuthService {
      * - Called during manual sign-up
      */
     static async register(userData) {
-        const { firstName, lastName, username, email, password, phoneNumber, status } = userData; // added username
+        const { firstName, lastName, username, email, password, phoneNumber, status, provider, discordHandle, discordId, googleId, image } = userData; // added username
         const plainEmail = email;
         const encryptedEmail = this.encryptEmail(email);
         const encryptedPhone = phoneNumber ? this.encryptPhone(phoneNumber) : '';
@@ -78,7 +78,15 @@ export default class AuthService {
             hashedPassword,
             phoneNumber ? encryptedPhone : '', // store encrypted phone number
             'user', // default role
-            status
+            status,
+            provider,
+            discordHandle,
+            discordId || '', // discordId
+            googleId || '', // googleId
+            '', // bio
+            [], // skills
+            0, // stake
+            image || '' // image
         );
         console.log("newUser", newUser);
         console.log('creating user');

@@ -92,7 +92,7 @@ const MembershipSection = () => {
                 color: theme.palette.background.default,
               },
             }}
-            onClick={() => window.open("https://discord.gg/YWcAd3TCDV", "_blank")}
+            onClick={() => window.open("/api/v1/discord/invite", "_blank")}
           >
             Join Our Discord
           </Button>

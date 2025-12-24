@@ -1,8 +1,10 @@
 import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
 import GoogleProvider from 'next-auth/providers/google';
 import DiscordProvider from 'next-auth/providers/discord'; // Added Discord provider
 import CredentialsProvider from 'next-auth/providers/credentials';
-import UsersService from '@/services/users';
+import UsersService from '@/app/api/v1/users/service'; // Import Server Service
+import DiscordService from '@/lib/discord';
 
 const baseURL = `${process.env.NEXT_PUBLIC_URL}`;
 
@@ -33,7 +35,9 @@ const providers = [
                             username: '',
                             email: profile.email,
                             provider: 'google',
-                            status: "verified"
+                            googleId: profile.sub,
+                            status: "verified",
+                            image: profile.picture
                         }),
                         headers: { "Content-Type": "application/json" }
                     });
@@ -56,6 +60,21 @@ const providers = [
 
                 // ✅ Return existing user data
                 const user = existingUser.user;
+
+                // ✅ Backwards Compatibility: Update user if provider is missing or image is missing
+                if (!user.provider || !user.googleId || !user.image) {
+                    console.log("Updating existing user with Google provider info...");
+                    await fetch(`${baseURL}/api/v1/users?userID=${user.userID}`, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            provider: 'google',
+                            googleId: profile.sub,
+                            image: user.image || profile.picture
+                        }),
+                        headers: { "Content-Type": "application/json" }
+                    });
+                }
+
                 return {
                     userID: user.userID,
                     name: `${user.firstName} ${user.lastName}`,
@@ -74,6 +93,7 @@ const providers = [
     DiscordProvider({
         clientId: process.env.DISCORD_CLIENT_ID,
         clientSecret: process.env.DISCORD_CLIENT_SECRET,
+        authorization: { params: { scope: 'identify email guilds.join' } },
         async profile(profile) {
             console.log("Discord Profile:", profile);
 
@@ -97,7 +117,10 @@ const providers = [
                         username: profile.username,
                         email: profile.email,
                         provider: 'discord',
-                        status: "verified"
+                        discordHandle: profile.username,
+                        discordId: profile.id,
+                        status: "verified",
+                        image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
                     }),
                     headers: { "Content-Type": "application/json" }
                 });
@@ -120,6 +143,22 @@ const providers = [
 
             // ✅ Return existing user data
             const user = existingUser.user;
+
+            // ✅ Backwards Compatibility: Update user if provider or discordHandle is missing or image is missing
+            if (!user.provider || !user.discordHandle || !user.discordId || !user.image) {
+                console.log("Updating existing user with Discord provider info...");
+                await fetch(`${baseURL}/api/v1/users?userID=${user.userID}`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        provider: 'discord',
+                        discordHandle: profile.username,
+                        discordId: profile.id,
+                        image: user.image || (profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null)
+                    }),
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
             return {
                 userID: user.userID,
                 name: `${user.firstName} ${user.lastName}`,
@@ -181,19 +220,48 @@ export const providerMap = providers.map((provider) => {
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+    ...authConfig,
     providers,
-    secret: process.env.AUTH_SECRET,
-    pages: {
-        signIn: '/auth/signin',
-    },
     callbacks: {
-        async jwt({ token, user }) {
+        async signIn({ user, account, profile }) {
+            if (account?.provider === 'discord' && account.access_token) {
+                try {
+                    console.log("🔗 Attempting to add user to Discord Guild...");
+                    await DiscordService.addMemberToGuild(profile.id, account.access_token);
+                } catch (error) {
+                    console.error("❌ Failed to add user to Discord guild:", error);
+                }
+            }
+            return true;
+        },
+        async jwt({ token, user, trigger }) {
             if (user) {
-                token.userID = user.userID;
-                token.name = user.name;
-                token.username = user.username; // save username
-                token.role = user.role;
-                token.image = user.image;
+                // Check for Merge Scenario
+                if (token.userID && token.userID !== user.userID) {
+                    console.log(`⚠️ Merge Detected: Merging ${user.userID} into ${token.userID}`);
+                    try {
+                        // Merge the new user (user.userID) into the existing session user (token.userID)
+                        const mergedUser = await UsersService.mergeUsers(token.userID, user.userID);
+                        
+                        // Update token with merged user data
+                        token.userID = mergedUser.userID;
+                        token.name = `${mergedUser.firstName} ${mergedUser.lastName}`;
+                        token.username = mergedUser.username;
+                        token.role = mergedUser.role;
+                        token.image = mergedUser.image || token.image;
+                        
+                        console.log("✅ Merge Successful");
+                    } catch (error) {
+                        console.error("❌ Merge Failed:", error);
+                    }
+                } else {
+                    // Standard Sign In
+                    token.userID = user.userID;
+                    token.name = user.name;
+                    token.username = user.username;
+                    token.role = user.role;
+                    token.image = user.image;
+                }
             }
             return token;
         },

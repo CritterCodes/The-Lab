@@ -3,6 +3,7 @@
 import User from "./class";
 import UserModel from "./model";
 import AuthService from '../../auth/[...nextauth]/service.js';
+import DiscordService from "@/lib/discord";
 
 export default class UserService {
     /**
@@ -20,12 +21,20 @@ export default class UserService {
             const newUser = new User(
                 userData.firstName,
                 userData.lastName,
+                userData.username,
                 userData.email,
                 userData.password,
                 userData.phoneNumber,
                 userData?.role,
-                userData?.business,
-                userData?.status
+                userData?.status,
+                userData?.provider,
+                userData?.discordHandle,
+                userData?.discordId,
+                userData?.googleId,
+                userData?.bio,
+                userData?.skills,
+                userData?.stake,
+                userData?.image
             );
             return await UserModel.createUser(newUser);
         } catch (error) {
@@ -63,11 +72,12 @@ export default class UserService {
 
     /**
      * ✅ Fetch all users
+     * @param {boolean} isPublic - If true, return only public users
      * @returns {Array} - List of all users
      */
-    static getAllUsers = async () => {
+    static getAllUsers = async (isPublic = false) => {
         try {
-            const users = await UserModel.getAllUsers();
+            const users = await UserModel.getAllUsers(isPublic);
             const decryptedUsers = users.map(user => {
                 // Decrypt fields for each user
                 user.email = AuthService.decryptEmail(user.email);
@@ -92,10 +102,79 @@ export default class UserService {
             // Encrypt email and phone in updateData if present
             if(updateData.email) updateData.email = AuthService.encryptEmail(updateData.email);
             if(updateData.phoneNumber) updateData.phoneNumber = AuthService.encryptPhone(updateData.phoneNumber);
+
+            // 1. Fetch current user to calculate new status
+            // We construct a search query that matches UserModel.getUserByQuery logic
+            const searchObj = {
+                userID: query,
+                email: query,
+                username: query,
+                phoneNumber: query,
+                firstName: query,
+                lastName: query
+            };
+            
+            const currentUser = await UserModel.getUserByQuery(searchObj);
+            
+            if (currentUser && updateData.membership) {
+                // Merge membership data
+                const mergedMembership = {
+                    ...currentUser.membership,
+                    ...updateData.membership,
+                    accessKey: {
+                        ...(currentUser.membership?.accessKey || {}),
+                        ...(updateData.membership?.accessKey || {})
+                    }
+                };
+
+                // Check if we should auto-update status
+                const currentStatus = currentUser.membership?.status;
+                const isManualStatus = currentStatus === 'probation' || currentStatus === 'suspended';
+                
+                // Only auto-calculate if not in a manual status, OR if the update explicitly changes status (which we can't easily detect here without comparing, but let's assume if they are in manual status we leave it unless they change it manually)
+                // Actually, if the user is in probation, we shouldn't auto-promote them.
+                
+                if (!isManualStatus) {
+                    let newStatus = 'registered';
+                    
+                    if (mergedMembership.applicationDate) newStatus = 'applicant';
+                    if (mergedMembership.contacted) newStatus = 'contacted';
+                    if (mergedMembership.onboardingComplete) newStatus = 'onboarding';
+                    
+                    // Check for probation eligibility (Waived or Active Subscription)
+                    const isMember = mergedMembership.isWaived || (mergedMembership.sponsorshipExpiresAt && new Date(mergedMembership.sponsorshipExpiresAt) > new Date());
+                    if (mergedMembership.onboardingComplete && isMember) newStatus = 'probation';
+
+                    if (mergedMembership.accessKey?.issued) newStatus = 'active';
+
+                    // Update the status in the merged membership
+                    mergedMembership.status = newStatus;
+                }
+                
+                // ✅ IMPORTANT: Update the updateData with the fully merged membership object
+                // This prevents MongoDB from replacing the entire membership object with just the partial update
+                updateData.membership = mergedMembership;
+            }
+
             const updatedUser = await UserModel.updateUser(query, updateData);
             if(updatedUser) {
                 updatedUser.email = AuthService.decryptEmail(updatedUser.email);
                 if(updatedUser.phoneNumber) updatedUser.phoneNumber = AuthService.decryptPhone(updatedUser.phoneNumber);
+
+                // ✅ Sync Discord Roles
+                if (updatedUser.discordId) {
+                    // Sync Creator Types
+                    if (updatedUser.creatorType) {
+                        DiscordService.syncCreatorRoles(updatedUser.discordId, updatedUser.creatorType)
+                            .catch(err => console.error("Background Creator Role Sync Failed:", err));
+                    }
+                    
+                    // Sync Membership Role (LabRatz)
+                    if (updatedUser.membership?.status) {
+                        DiscordService.syncMembershipRole(updatedUser.discordId, updatedUser.membership.status)
+                            .catch(err => console.error("Background Membership Role Sync Failed:", err));
+                    }
+                }
             }
             return updatedUser;
         } catch (error) {
@@ -116,6 +195,60 @@ export default class UserService {
         } catch (error) {
             console.error("Error in UserService.deleteUser:", error);
             throw new Error("Failed to delete user.");
+        }
+    }
+
+    /**
+     * ✅ Merge two users
+     * Moves data from sourceUser to targetUser and deletes sourceUser
+     * @param {string} targetUserID - The ID of the user to keep
+     * @param {string} sourceUserID - The ID of the user to delete
+     */
+    static mergeUsers = async (targetUserID, sourceUserID) => {
+        try {
+            console.log(`🔀 Merging User ${sourceUserID} into ${targetUserID}`);
+            
+            const targetUser = await this.getUserByQuery({ userID: targetUserID });
+            const sourceUser = await this.getUserByQuery({ userID: sourceUserID });
+
+            if (!targetUser || !sourceUser) {
+                throw new Error("One or both users not found.");
+            }
+
+            // Fields to copy if missing in target
+            const fieldsToMerge = [
+                'discordHandle', 'discordId', 'googleId', 'phoneNumber', 
+                'firstName', 'lastName', 'image', 'bio', 'hobbies', 'creatorType',
+                'cityChange', 'knownMembers', 'questions'
+            ];
+
+            const updateData = {};
+            fieldsToMerge.forEach(field => {
+                if (!targetUser[field] && sourceUser[field]) {
+                    updateData[field] = sourceUser[field];
+                }
+            });
+
+            // If source has a provider and target doesn't (or target is local), update provider
+            if (sourceUser.provider && (!targetUser.provider || targetUser.provider === 'local')) {
+                updateData.provider = sourceUser.provider;
+            }
+
+            // Update target user
+            if (Object.keys(updateData).length > 0) {
+                console.log("Updating target user with:", updateData);
+                await this.updateUser(targetUserID, updateData);
+            }
+
+            // Delete source user
+            console.log("Deleting source user:", sourceUserID);
+            await this.deleteUser({ userID: sourceUserID });
+
+            return await this.getUserByQuery({ userID: targetUserID });
+
+        } catch (error) {
+            console.error("❌ Error in UserService.mergeUsers:", error);
+            throw error;
         }
     }
 }

@@ -1,5 +1,8 @@
-import { auth } from "../auth";
+import NextAuth from "next-auth";
+import { authConfig } from "../auth.config";
 import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 // List of public routes that can be accessed without authentication
 const publicRoutes = ["/", "/auth/signin", "/auth/register"];
@@ -9,7 +12,7 @@ export default async function middleware(req) {
     const { pathname } = req.nextUrl;
 
     // ✅ Allow public routes to be accessed without authentication
-    if (publicRoutes.includes(pathname)) {
+    if (publicRoutes.includes(pathname) || pathname.startsWith('/members')) {
         return NextResponse.next();
     }
 

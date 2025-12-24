@@ -14,8 +14,15 @@ import {
   Snackbar,
   useTheme,
   CircularProgress,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Alert,
+  AlertTitle
 } from "@mui/material";
 import LoadingTerminal from "@/app/components/LoadingTerminal";
+import VolunteerLog from "./VolunteerLog";
 
 const MembershipTab = ({ user, onUpdateMembership }) => {
   const theme = useTheme();
@@ -28,13 +35,40 @@ const MembershipTab = ({ user, onUpdateMembership }) => {
   const [billingType, setBillingType] = useState("monthly");
   const router = useRouter();
 
+  const membershipStatus = user?.membership || {};
+  const isReadyForPayment = membershipStatus.applicationDate && membershipStatus.contacted && membershipStatus.onboardingComplete;
+
+  const activeStep = (() => {
+      if (!membershipStatus.applicationDate) return 0;
+      if (!membershipStatus.contacted) return 1;
+      if (!membershipStatus.onboardingComplete) return 2;
+      return 3; // Ready for payment
+  })();
+
+  const steps = [
+      {
+          label: 'Submit Application',
+          description: 'Please complete the onboarding questionnaire to get started.',
+          action: <Button variant="contained" color="primary" href={user?.userID ? `/dashboard/${user.userID}/onboarding` : "/dashboard/onboarding"} >Complete Questionnaire</Button> 
+      },
+      {
+          label: 'Initial Contact',
+          description: 'A team member will reach out to you shortly to discuss your application.',
+      },
+      {
+          label: 'Onboarding',
+          description: 'Meet with us to complete paperwork and safety orientation.',
+      },
+      {
+          label: 'Select Membership',
+          description: 'Choose a plan that fits your needs.',
+      }
+  ];
+
   const loadingSteps = [
-    'Initializing...',
-    'Loading membership plans...',
-    'Connecting to database...',
-    'Retrieving user information...',
-    'Finalizing setup...',
-    'Almost there...'
+    "Fetching membership plans...",
+    "Checking user status...",
+    "Loading payment options..."
   ];
 
   useEffect(() => {
@@ -74,6 +108,48 @@ const MembershipTab = ({ user, onUpdateMembership }) => {
 
   if (loading) {
     return <LoadingTerminal steps={loadingSteps} />;
+  }
+
+  if (!isReadyForPayment) {
+      return (
+          <Box sx={{ mt: 3 }}>
+              <Typography variant="h5" gutterBottom>Membership Application Status</Typography>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                  <AlertTitle>Action Required</AlertTitle>
+                  Please complete the following steps to unlock membership payment options.
+              </Alert>
+              
+              <Card sx={{ border: `1px solid ${theme.palette.primary.main}` }}>
+                  <CardContent>
+                      <Stepper activeStep={activeStep} orientation="vertical">
+                          {steps.map((step, index) => (
+                              <Step key={step.label} expanded={true}>
+                                  <StepLabel 
+                                    StepIconProps={{
+                                        sx: { 
+                                            color: index <= activeStep ? theme.palette.primary.main : theme.palette.text.disabled,
+                                            '&.Mui-active': { color: theme.palette.warning.main },
+                                            '&.Mui-completed': { color: theme.palette.success.main },
+                                        }
+                                    }}
+                                  >
+                                      {step.label}
+                                  </StepLabel>
+                                  <StepContent>
+                                      <Typography>{step.description}</Typography>
+                                      {index === activeStep && step.action && (
+                                          <Box sx={{ mt: 2 }}>
+                                              {step.action}
+                                          </Box>
+                                      )}
+                                  </StepContent>
+                              </Step>
+                          ))}
+                      </Stepper>
+                  </CardContent>
+              </Card>
+          </Box>
+      );
   }
 
   return (
@@ -162,6 +238,8 @@ const MembershipTab = ({ user, onUpdateMembership }) => {
           </Grid>
         ))}
       </Grid>
+
+      <VolunteerLog user={user} onUpdate={onUpdateMembership} />
 
       <Snackbar
         open={snackbarOpen}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 
-const LoadingTerminal = ({ steps }) => {
+const LoadingTerminal = ({ steps = ['Loading...'] }) => {
   const [lines, setLines] = useState([]);
   const [dots, setDots] = useState('');
 

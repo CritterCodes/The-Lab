@@ -1,11 +1,24 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { PageContainer } from '@toolpad/core/PageContainer';
-import { useTheme, Box } from '@mui/material';
+import { useTheme, Box, CircularProgress } from '@mui/material';
 
 export default function Layout({ children }) {
   const theme = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <DashboardLayout>

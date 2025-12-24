@@ -8,6 +8,8 @@ import UserDetailsForm from '@/app/components/profile/details';
 import UserImage from '@/app/components/profile/image';
 import UsersService from '@/services/users';
 import MembershipTab from '@/app/components/profile/tabs/membership';
+import PublicProfileTab from '@/app/components/profile/tabs/publicProfile';
+import SettingsTab from '@/app/components/profile/tabs/settings';
 import LoadingTerminal from '@/app/components/LoadingTerminal';
 
 const ViewUserPage = ({ params }) => {
@@ -74,6 +76,15 @@ const ViewUserPage = ({ params }) => {
         setSnackbarOpen(true);
     };
 
+    const handleMembershipUpdate = (updatedUserData) => {
+        console.log("✅ Membership Updated:", updatedUserData);
+        setUser(updatedUserData);
+        setUpdatedUser(updatedUserData);
+        setSnackbarMessage("Membership updated successfully!");
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+    };
+
     const handleSaveChanges = async () => {
         try {
             if (!userID) {
@@ -85,13 +96,26 @@ const ViewUserPage = ({ params }) => {
             }
 
             setLoading(true);
-            console.log("📦 Saving Updated User Data:", updatedUser);
-            await UsersService.updateUser(userID, updatedUser);
+            
+            // If on Public Profile tab (index 2), mark profile as completed
+            const dataToSave = { ...updatedUser };
+            if (activeTab === 2) {
+                dataToSave.profileCompleted = true;
+                // Ensure isPublic defaults to true if not set, though the switch handles the UI
+                if (dataToSave.isPublic === undefined) dataToSave.isPublic = true;
+            }
+
+            console.log("📦 Saving Updated User Data:", dataToSave);
+            await UsersService.updateUser(userID, dataToSave);
 
             setSnackbarMessage("✅ User saved successfully!");
             setSnackbarSeverity('success');
             setSnackbarOpen(true);
             setHasChanges(false);
+            
+            // Update local state
+            setUser(dataToSave);
+            setUpdatedUser(dataToSave);
         } catch (error) {
             console.error("❌ Error Saving User:", error);
             setSnackbarMessage(`❌ Error saving user: ${error.message}`);
@@ -142,7 +166,19 @@ const ViewUserPage = ({ params }) => {
             {/* Membership Tab */}
             {activeTab === 1 && (
                 <Box sx={{ mt: 3 }}>
-                  <MembershipTab user={user} />
+                  <MembershipTab user={user} onUpdateMembership={handleMembershipUpdate} />
+                </Box>
+            )}
+            {/* Public Profile Tab */}
+            {activeTab === 2 && (
+                <Box sx={{ mt: 3 }}>
+                  <PublicProfileTab user={updatedUser} onEdit={handleEditChange} />
+                </Box>
+            )}
+            {/* Settings Tab */}
+            {activeTab === 3 && (
+                <Box sx={{ mt: 3 }}>
+                  <SettingsTab user={updatedUser} />
                 </Box>
             )}
             {/* Snackbar */}

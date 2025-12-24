@@ -6,7 +6,10 @@ export default class SubscriptionService {
   static processWebhook = async (payload) => {
     try {
       // Extract the customer_id from the nested payload.
-      const customer_id = payload?.data?.object?.subscription?.customer_id;
+      const subscription = payload?.data?.object?.subscription;
+      const customer_id = subscription?.customer_id;
+      const subscriptionStatus = subscription?.status; // ACTIVE, CANCELED, etc.
+
       if (!customer_id) {
         throw new Error("Missing customer_id in webhook payload.");
       }
@@ -49,7 +52,14 @@ export default class SubscriptionService {
       const encryptedEmail = AuthService.encryptEmail(customer.emailAddress);
 
       // Update the lab user with the Square customer_id using the encrypted email as query.
-      const updatedUser = await UserService.updateUser(encryptedEmail, { squareID: customer_id });
+      const updateData = { 
+        squareID: customer_id,
+        "membership.squareSubscriptionId": subscription.id,
+        "membership.subscriptionStatus": subscriptionStatus,
+        "membership.lastPaymentDate": new Date().toISOString()
+      };
+
+      const updatedUser = await UserService.updateUser(encryptedEmail, updateData);
       if (!updatedUser) {
         throw new Error("Failed to update lab user with squareID.");
       }

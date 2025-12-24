@@ -86,11 +86,15 @@ export default class UserController {
 
     /**
      * ✅ Get all users from the database
+     * @param {Request} req - The request object
      * @returns {Response} - JSON response with all users or error message
      */
-    static getAllUsers = async () => {
+    static getAllUsers = async (req) => {
         try {
-            const users = await UserService.getAllUsers();
+            const { searchParams } = new URL(req.url);
+            const isPublic = searchParams.get('isPublic') === 'true';
+            
+            const users = await UserService.getAllUsers(isPublic);
             return new Response(
                 JSON.stringify({ users }),
                 { status: 200 }
@@ -112,12 +116,24 @@ export default class UserController {
     static updateUser = async (req) => {
         try {
             const { searchParams } = new URL(req.url);
-            const query = searchParams.get("query");
+            let query = searchParams.get("query");
             const updateData = await req.json();
 
             if (!query) {
+                // If 'query' param is missing, check for specific identifiers
+                const identifiers = ['userID', 'email', 'username', 'phoneNumber'];
+                for (const id of identifiers) {
+                    const val = searchParams.get(id);
+                    if (val) {
+                        query = val;
+                        break;
+                    }
+                }
+            }
+
+            if (!query) {
                 return new Response(
-                    JSON.stringify({ error: "Query parameter is required." }),
+                    JSON.stringify({ error: "Query parameter (or userID, email, etc.) is required." }),
                     { status: 400 }
                 );
             }

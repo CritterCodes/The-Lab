@@ -1,10 +1,14 @@
-import React from 'react';
-import { Box, IconButton, Menu, MenuItem, Tabs, Tab } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, IconButton, Menu, MenuItem, Tabs, Tab, Chip, Tooltip, Snackbar, Alert } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import StarIcon from '@mui/icons-material/Star';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ShareIcon from '@mui/icons-material/Share';
 import UsersService from '@/services/users'; 
 
-const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab }) => {
-    const [anchorEl, setAnchorEl] = React.useState(null);
+const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab, user }) => {
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const open = Boolean(anchorEl);
 
     const handleClick = (event) => {
@@ -19,6 +23,26 @@ const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab }) => {
         setActiveTab(newValue);
     };
 
+    const handleViewProfile = () => {
+        if (user?.username) {
+            window.open(`/members/${user.username}`, '_blank');
+        } else if (user?.userID) {
+            window.open(`/members/${user.userID}`, '_blank');
+        }
+    };
+
+    const handleShareProfile = () => {
+        if (user?.username) {
+            const url = `${window.location.origin}/members/${user.username}`;
+            navigator.clipboard.writeText(url);
+            setSnackbarOpen(true);
+        } else if (user?.userID) {
+            const url = `${window.location.origin}/members/${user.userID}`;
+            navigator.clipboard.writeText(url);
+            setSnackbarOpen(true);
+        }
+    };
+
     return (
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             
@@ -26,12 +50,45 @@ const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab }) => {
             <Tabs value={activeTab} onChange={handleTabChange}>
                 <Tab label="User Details" />
                 <Tab label="Membership" />
+                <Tab 
+                    label="Public Profile" 
+                    disabled={!user?.membership?.status || (user.membership.status !== 'active' && user.membership.status !== 'probation' && user.role !== 'admin')}
+                />
+                <Tab label="Settings" />
             </Tabs>
 
-            {/* Three Dots for Actions Section */}
-            <IconButton aria-label="more" onClick={handleClick}>
-                <MoreVertIcon />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {user && (
+                    <>
+                        <Tooltip title="View Public Profile">
+                            <IconButton onClick={handleViewProfile} color="primary">
+                                <VisibilityIcon />
+                            </IconButton>
+                        </Tooltip>
+                        
+                        <Tooltip title="Share Profile Link">
+                            <IconButton onClick={handleShareProfile} color="primary">
+                                <ShareIcon />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Community Stake Score">
+                            <Chip 
+                                icon={<StarIcon />} 
+                                label={`${user.stake || 0} Stake`} 
+                                color="warning" 
+                                variant="outlined" 
+                                sx={{ ml: 1 }}
+                            />
+                        </Tooltip>
+                    </>
+                )}
+
+                {/* Three Dots for Actions Section */}
+                <IconButton aria-label="more" onClick={handleClick}>
+                    <MoreVertIcon />
+                </IconButton>
+            </Box>
 
             {/* Dropdown Menu for Actions */}
             <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
@@ -39,8 +96,18 @@ const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab }) => {
                 <MenuItem onClick={onSave} disabled={!hasChanges}>
                     Save Changes
                 </MenuItem>
-                
             </Menu>
+
+            <Snackbar 
+                open={snackbarOpen} 
+                autoHideDuration={3000} 
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+                    Profile link copied to clipboard!
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

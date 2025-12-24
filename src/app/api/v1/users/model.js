@@ -54,12 +54,17 @@ export default class UserModel {
 
     /**
      * ✅ Get all users
+     * @param {boolean} isPublic - If true, return only public users who are active or on probation
      * @returns {Array} - Array of all users
      */
-    static getAllUsers = async () => {
+    static getAllUsers = async (isPublic = false) => {
         try {
             const dbUsers = await db.dbUsers();
-            const users = await dbUsers.find().toArray();
+            const filter = isPublic ? { 
+                isPublic: true,
+                "membership.status": { $in: ["active", "probation"] }
+            } : {};
+            const users = await dbUsers.find(filter).toArray();
             return users;
         } catch (error) {
             console.error("Error retrieving all users:", error);

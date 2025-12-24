@@ -1,4 +1,7 @@
-import { Box, Typography } from "@mui/material";
+"use client";
+
+import { Box, Typography, Link as MuiLink } from "@mui/material";
+import Link from "next/link";
 
 const Footer = () => (
   <Box
@@ -9,9 +12,18 @@ const Footer = () => (
       color: "#fff",
     }}
   >
-    <Typography variant="body2">
+    <Typography variant="body2" gutterBottom>
       © 2024 Fab Lab Fort Smith. All rights reserved.
     </Typography>
+    <Box sx={{ mt: 1 }}>
+        <MuiLink component={Link} href="/code-of-conduct" color="inherit" underline="hover" sx={{ mx: 1 }}>
+            Code of Conduct
+        </MuiLink>
+        |
+        <MuiLink component={Link} href="/about" color="inherit" underline="hover" sx={{ mx: 1 }}>
+            About Us
+        </MuiLink>
+    </Box>
   </Box>
 );
 

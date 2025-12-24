@@ -1,11 +1,6 @@
 :root {
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-  }
+  --background: #000000;
+  --foreground: #00ff00;
 }
 
 html,
@@ -15,16 +10,9 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #000000; /* Black background */
-  color: #00ff00; /* Green text */
-}
-
-body {
+  background-color: var(--background);
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Roboto Mono', monospace;
 }
 
 * {
@@ -38,31 +26,25 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-}
-
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 12px;
-  z-index: 100000; /* Ensure scrollbar is above other elements */
+  z-index: 100000;
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000; /* Black background */
-  z-index: 100000; /* Ensure scrollbar track is above other elements */
+  background: #000000;
+  z-index: 100000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #00ff00; /* Green thumb */
+  background-color: #00ff00;
   border-radius: 10px;
-  border: 3px solid #000000; /* Black border */
+  border: 3px solid #000000;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #00cc00; /* Darker green on hover */
+  background-color: #00cc00;
 }
 
 #root, #__next {
@@ -78,3 +60,28 @@ header {
   z-index: 1100;
   position: relative;
 }
+
+/* Autofill styles for Chrome/Edge */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+    -webkit-text-fill-color: #00ff00 !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+::selection {
+  background-color: #00ff00;
+  color: #000000;
+}
+
+a {
+  color: #00ff00;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+

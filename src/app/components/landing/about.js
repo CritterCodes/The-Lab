@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { Box, Typography, Button, useTheme } from "@mui/material";
+import Link from "next/link";
 
 const AboutSection = () => {
   const shouldReduceMotion = useReducedMotion();
@@ -99,6 +100,8 @@ const AboutSection = () => {
                 borderColor: theme.palette.primary.main,
               },
             }}
+            component={Link}
+            href="/about"
           >
             Learn More About Us
           </Button>
