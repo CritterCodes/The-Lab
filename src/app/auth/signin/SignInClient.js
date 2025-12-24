@@ -74,6 +74,7 @@ const SignInClient = ({ providers }) => {
             <Box
                 sx={{
                     display: 'flex',
+                    flexDirection: 'column',
                     justifyContent: 'center',
                     alignItems: 'center',
                     minHeight: '100vh',
@@ -82,6 +83,12 @@ const SignInClient = ({ providers }) => {
                     padding: '2rem',
                 }}
             >
+                <Alert severity="warning" sx={{ mb: 3, maxWidth: '400px', width: '100%' }}>
+                    <Typography variant="body2">
+                        <strong>Notice:</strong> Inactive accounts without a paid membership have been removed. If you cannot sign in, please <Link href="/auth/register">create a new account</Link>.
+                    </Typography>
+                </Alert>
+
                 <SignInPage
                     signIn={handleSignIn}
                     providers={providers}

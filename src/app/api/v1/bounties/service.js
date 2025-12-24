@@ -1,6 +1,7 @@
 import Bounty from "./class";
 import BountyModel from "./model";
 import UserModel from "../users/model";
+import { v4 as uuidv4 } from 'uuid';
 
 export default class BountyService {
     static async createBounty(data) {
@@ -51,7 +52,20 @@ export default class BountyService {
                 { startsAt: { $lte: new Date() } }
             ]
         };
-        return await BountyModel.getAllBounties(filter);
+        const bounties = await BountyModel.getAllBounties(filter);
+
+        // Enrich with usernames
+        const allUsers = await UserModel.getAllUsers();
+        const userMap = {};
+        allUsers.forEach(u => {
+            userMap[u.userID] = u.username || u.firstName || "Unknown";
+        });
+
+        return bounties.map(b => ({
+            ...b,
+            assignedToUsername: userMap[b.assignedTo] || b.assignedTo,
+            creatorUsername: userMap[b.creatorID] || b.creatorID
+        }));
     }
 
     static async getBountyById(bountyID) {
@@ -110,7 +124,7 @@ export default class BountyService {
                 // If reward is volunteer hours, log them
                 if (bounty.rewardType === 'hours') {
                     const newLog = {
-                        id: crypto.randomUUID(),
+                        id: uuidv4(),
                         date: new Date().toISOString(),
                         hours: Number(bounty.rewardValue),
                         description: `Bounty Completed: ${bounty.title}`,
@@ -168,8 +182,58 @@ export default class BountyService {
     static async cancelBounty(bountyID, userID) {
         const bounty = await BountyModel.getBountyById(bountyID);
         if (!bounty) throw new Error("Bounty not found");
-        if (bounty.creatorID !== userID) throw new Error("Only the creator can cancel this bounty");
+        
+        // Check if user is creator OR admin
+        const user = await UserModel.getUserByQuery({ userID });
+        const isAdmin = user?.role === 'admin';
+        
+        if (bounty.creatorID !== userID && !isAdmin) {
+            throw new Error("Only the creator or an admin can cancel this bounty");
+        }
 
         return await BountyModel.updateBounty(bountyID, { status: 'cancelled' });
+    }
+
+    static async editBounty(bountyID, userID, updateData) {
+        const bounty = await BountyModel.getBountyById(bountyID);
+        if (!bounty) throw new Error("Bounty not found");
+
+        // Check permissions
+        const user = await UserModel.getUserByQuery({ userID });
+        const isAdmin = user?.role === 'admin';
+
+        if (bounty.creatorID !== userID && !isAdmin) {
+            throw new Error("Only the creator or an admin can edit this bounty");
+        }
+
+        // Prevent editing if already completed/verified
+        if (['completed', 'verified'].includes(bounty.status)) {
+            throw new Error("Cannot edit a completed bounty");
+        }
+
+        return await BountyModel.updateBounty(bountyID, updateData);
+    }
+
+    static async clawbackBounty(bountyID, userID) {
+        const bounty = await BountyModel.getBountyById(bountyID);
+        if (!bounty) throw new Error("Bounty not found");
+
+        // Check permissions
+        const user = await UserModel.getUserByQuery({ userID });
+        const isAdmin = user?.role === 'admin';
+
+        if (bounty.creatorID !== userID && !isAdmin) {
+            throw new Error("Only the creator or an admin can clawback this bounty");
+        }
+
+        if (bounty.status !== 'assigned') {
+            throw new Error("Bounty is not currently assigned");
+        }
+
+        return await BountyModel.updateBounty(bountyID, {
+            status: 'open',
+            assignedTo: null,
+            assignedAt: null
+        });
     }
 }

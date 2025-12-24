@@ -17,6 +17,23 @@ export async function POST(req) {
         if (!data || typeof data !== "object") {
             return NextResponse.json({ error: "Invalid request data format." }, { status: 400 });
         }
+
+        // Verify Captcha
+        const { captchaToken } = data;
+        if (!captchaToken) {
+             return NextResponse.json({ error: "Captcha token is missing." }, { status: 400 });
+        }
+
+        const secretKey = process.env.RECAPTCHA_SECRET_KEY || "6LeIxAcTAAAAAGG-vFI1TnRWxPZ7d02F2KbTK44"; // Test Secret Key
+        const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
+
+        const captchaRes = await fetch(verificationUrl, { method: "POST" });
+        const captchaData = await captchaRes.json();
+
+        if (!captchaData.success) {
+            return NextResponse.json({ error: "Captcha verification failed." }, { status: 400 });
+        }
+
         console.log(data);
         console.log('sending to auth controller');
         // Register the new user using the AuthController service

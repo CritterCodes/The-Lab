@@ -45,6 +45,12 @@ export default class BountyController {
                 case 'cancel':
                     result = await BountyService.cancelBounty(bountyID, data.userID);
                     break;
+                case 'edit':
+                    result = await BountyService.editBounty(bountyID, data.userID, data.updateData);
+                    break;
+                case 'clawback':
+                    result = await BountyService.clawbackBounty(bountyID, data.userID);
+                    break;
                 default:
                     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400 });
             }

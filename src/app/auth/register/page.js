@@ -1,6 +1,7 @@
 "use client";
 import { signIn } from "next-auth/react";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 import {
   TextField,
   Button,
@@ -25,15 +26,22 @@ const RegisterPage = () => {
     phoneNumber: "",
   });
   const [error, setError] = useState("");
+  const recaptchaRef = useRef(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
 
+    const captchaToken = recaptchaRef.current?.getValue();
+    if (!captchaToken) {
+      setError("Please complete the captcha.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, captchaToken }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -43,9 +51,11 @@ const RegisterPage = () => {
       } else {
         const errorData = await res.json();
         setError(errorData.message || "Registration failed.");
+        recaptchaRef.current?.reset();
       }
     } catch (err) {
       setError("Something went wrong.");
+      recaptchaRef.current?.reset();
     }
   };
 
@@ -198,6 +208,13 @@ const RegisterPage = () => {
                       value={form.password}
                       onChange={handleChange}
                       required
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                    <ReCAPTCHA
+                      ref={recaptchaRef}
+                      sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
                     />
                   </Grid>
                 </Grid>
