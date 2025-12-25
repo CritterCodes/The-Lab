@@ -272,33 +272,48 @@ export default function MembersDirectory() {
                                     display: 'flex', 
                                     flexDirection: 'column',
                                     cursor: 'pointer',
-                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    transition: 'all 0.3s ease-in-out',
+                                    border: `1px solid ${theme.palette.divider}`,
+                                    backgroundColor: 'rgba(0, 255, 0, 0.02)',
                                     '&:hover': {
                                         transform: 'translateY(-4px)',
-                                        boxShadow: 6
+                                        boxShadow: `0 4px 20px rgba(0, 255, 0, 0.25)`,
+                                        borderColor: theme.palette.primary.main
                                     }
                                 }}
                                 onClick={() => handleCardClick(user.username)}
                             >
-                                <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
+                                <Box sx={{ 
+                                    height: 60, 
+                                    background: `linear-gradient(180deg, ${theme.palette.action.hover} 0%, transparent 100%)`,
+                                    mb: -5
+                                }} />
+                                <CardContent sx={{ flexGrow: 1, textAlign: 'center', pt: 0 }}>
                                     <Avatar
                                         src={user.image || "/default-avatar.png"}
-                                        sx={{ width: 100, height: 100, mx: 'auto', mb: 2, border: `3px solid ${theme.palette.primary.main}` }}
+                                        sx={{ 
+                                            width: 100, 
+                                            height: 100, 
+                                            mx: 'auto', 
+                                            mb: 2, 
+                                            border: `2px solid ${theme.palette.primary.main}`,
+                                            bgcolor: theme.palette.background.paper
+                                        }}
                                     />
-                                    <Typography variant="h6" component="div" gutterBottom>
+                                    <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
                                         {user.username || `${user.firstName} ${user.lastName}`}
                                     </Typography>
                                     
-                                    {user.role === 'admin' && user.boardPosition && (
+                                    {user.role === 'admin' && (
                                         <Chip 
-                                            label={user.boardPosition} 
+                                            label={user.boardPosition || "Admin"} 
                                             color="secondary" 
                                             size="small" 
-                                            sx={{ mb: 1, fontWeight: 'bold' }} 
+                                            sx={{ mt: 1, mb: 2, fontWeight: 'bold' }} 
                                         />
                                     )}
                                     
-                                    <Box sx={{ mb: 2, minHeight: 40 }}>
+                                    <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
                                         {(user.creatorType || []).slice(0, 3).map((type) => (
                                             <Chip 
                                                 key={type} 
@@ -306,11 +321,10 @@ export default function MembersDirectory() {
                                                 size="small" 
                                                 variant="outlined" 
                                                 color="primary"
-                                                sx={{ m: 0.5 }} 
                                             />
                                         ))}
                                         {(user.creatorType || []).length > 3 && (
-                                            <Chip label={`+${user.creatorType.length - 3}`} size="small" variant="outlined" sx={{ m: 0.5 }} />
+                                            <Chip label={`+${user.creatorType.length - 3}`} size="small" variant="outlined" color="primary" />
                                         )}
                                     </Box>
 
@@ -319,17 +333,31 @@ export default function MembersDirectory() {
                                         WebkitLineClamp: 3,
                                         WebkitBoxOrient: 'vertical',
                                         overflow: 'hidden',
-                                        mb: 2
+                                        mb: 2,
+                                        minHeight: '3em' // Ensure consistent height for bio area
                                     }}>
                                         {user.bio || "No bio provided."}
                                     </Typography>
 
                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
                                         {(user.skills || []).slice(0, 4).map((skill) => (
-                                            <Chip key={skill} label={skill} size="small" sx={{ bgcolor: theme.palette.action.hover }} />
+                                            <Chip 
+                                                key={skill} 
+                                                label={skill} 
+                                                size="small" 
+                                                sx={{ 
+                                                    bgcolor: 'rgba(0, 255, 0, 0.1)',
+                                                    border: '1px solid rgba(0, 255, 0, 0.2)',
+                                                    color: theme.palette.text.primary
+                                                }} 
+                                            />
                                         ))}
                                         {(user.skills || []).length > 4 && (
-                                            <Chip label={`+${user.skills.length - 4}`} size="small" sx={{ bgcolor: theme.palette.action.hover }} />
+                                            <Chip 
+                                                label={`+${user.skills.length - 4}`} 
+                                                size="small" 
+                                                sx={{ bgcolor: 'rgba(0, 255, 0, 0.1)' }} 
+                                            />
                                         )}
                                     </Box>
                                 </CardContent>
@@ -337,11 +365,17 @@ export default function MembersDirectory() {
                                     <Button 
                                         fullWidth 
                                         variant="outlined" 
-                                        color="secondary" 
+                                        color="primary" 
                                         size="small"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleSponsorClick(user);
+                                        }}
+                                        sx={{
+                                            borderRadius: 2,
+                                            '&:hover': {
+                                                bgcolor: 'rgba(0, 255, 0, 0.1)'
+                                            }
                                         }}
                                     >
                                         Sponsor Member
