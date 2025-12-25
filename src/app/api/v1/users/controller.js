@@ -196,4 +196,22 @@ export default class UserController {
             );
         }
     }
+
+    /**
+     * ✅ Nudge a user
+     */
+    static nudgeUser = async (req) => {
+        try {
+            const { userID } = await req.json();
+            if (!userID) {
+                return new Response(JSON.stringify({ error: "UserID is required" }), { status: 400 });
+            }
+
+            const result = await UserService.nudgeUser(userID);
+            return new Response(JSON.stringify(result), { status: 200 });
+        } catch (error) {
+            console.error("Error in UserController.nudgeUser:", error);
+            return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+        }
+    }
 }

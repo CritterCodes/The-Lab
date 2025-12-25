@@ -6,7 +6,7 @@ import {
     Checkbox, FormControlLabel, TextField, Select, MenuItem,
     InputLabel, FormControl, Chip, Divider, List, ListItem, ListItemText, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Paper,
-    useTheme, useMediaQuery, Tabs, Tab, Card, CardContent, Stack, AppBar, Toolbar
+    useTheme, useMediaQuery, Tabs, Tab, Card, CardContent, Stack, AppBar, Toolbar, Tooltip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -14,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -97,6 +98,28 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                 volunteerLog: prev.membership.volunteerLog.filter(l => l.id !== logId)
             }
         }));
+    };
+
+    const handleNudge = async () => {
+        if (!confirm(`Send a reminder email to ${user.firstName}?`)) return;
+
+        try {
+            const response = await fetch('/api/v1/users/nudge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userID: user.userID })
+            });
+            
+            if (response.ok) {
+                alert(`Nudge sent to ${user.firstName}!`);
+            } else {
+                const data = await response.json();
+                alert(`Failed to send nudge: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error sending nudge:", error);
+            alert("Error sending nudge.");
+        }
     };
 
     const totalHours = (formData.membership.volunteerLog || []).reduce((acc, log) => acc + log.hours, 0);
@@ -231,10 +254,24 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                         <Button autoFocus color="inherit" onClick={handleSave} disabled={loading}>
                             {loading ? <CircularProgress size={24} color="inherit" /> : 'Save'}
                         </Button>
+                        <Tooltip title="Send Reminder (Nudge)">
+                            <IconButton onClick={handleNudge} color="warning" sx={{ ml: 1 }}>
+                                <NotificationsActiveIcon />
+                            </IconButton>
+                        </Tooltip>
                     </Toolbar>
                 </AppBar>
             ) : (
-                <DialogTitle>Manage Member: {user.firstName} {user.lastName}</DialogTitle>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Manage Member: {user.firstName} {user.lastName}
+                    <Box>
+                        <Tooltip title="Send Reminder (Nudge)">
+                            <IconButton onClick={handleNudge} color="warning" sx={{ mr: 1 }}>
+                                <NotificationsActiveIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </DialogTitle>
             )}
 
             <DialogContent sx={{ p: 0 }}>

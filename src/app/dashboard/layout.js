@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { PageContainer } from '@toolpad/core/PageContainer';
 import { useTheme, Box, CircularProgress } from '@mui/material';
+import NotificationBell from './components/NotificationBell';
 
 export default function Layout({ children }) {
   const theme = useTheme();
@@ -21,7 +22,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout slots={{ toolbarActions: NotificationBell }}>
       <Box
         sx={{
           backgroundColor: theme.palette.background.default,

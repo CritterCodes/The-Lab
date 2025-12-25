@@ -1,6 +1,14 @@
 import Bounty from "./class";
 import BountyModel from "./model";
 import UserModel from "../users/model";
+import NotificationService from "../notifications/service";
+import AuthService from "../../auth/[...nextauth]/service";
+import { 
+    sendBountyNotificationEmail, 
+    sendBountyClaimedEmail, 
+    sendBountySubmittedEmail, 
+    sendBountyVerifiedEmail 
+} from "../../../utils/email.util";
 import { v4 as uuidv4 } from 'uuid';
 
 export default class BountyService {
@@ -41,7 +49,65 @@ export default class BountyService {
             data.recurrence,
             data.startsAt
         );
-        return await BountyModel.createBounty(bounty);
+        
+        const createdBounty = await BountyModel.createBounty(bounty);
+
+        // Notify all active members (Awaiting to ensure execution in serverless env)
+        try {
+            console.log("🔔 Starting notification process for new bounty:", bounty.title);
+            console.log("🔔 Creator ID:", data.creatorID);
+            
+            const activeMembers = await UserModel.getActiveMembers();
+            console.log(`🔔 Found ${activeMembers.length} active members to notify.`);
+            
+            const notifications = [];
+            
+            for (const member of activeMembers) {
+                // Don't notify the creator (Commented out for testing purposes)
+                // if (member.userID === data.creatorID) {
+                //     console.log(`🔔 Skipping notification for creator: ${member.userID}`);
+                //     continue;
+                // }
+
+                // 1. In-app Notification
+                notifications.push(NotificationService.create({
+                    userID: member.userID,
+                    type: 'info',
+                    title: 'New Bounty Available',
+                    message: `New bounty posted: ${bounty.title}`,
+                    link: `/dashboard/bounties?highlight=${bounty.bountyID}`,
+                    metadata: { bountyID: bounty.bountyID }
+                }));
+
+                // 2. Email Notification
+                if (member.email) {
+                    try {
+                        const decryptedEmail = AuthService.decryptEmail(member.email);
+                        if (decryptedEmail) {
+                            console.log(`📧 Queuing email for ${decryptedEmail} (${member.firstName})`);
+                            notifications.push(sendBountyNotificationEmail(decryptedEmail, member.firstName || 'Member', bounty));
+                        } else {
+                            console.warn(`⚠️ Could not decrypt email for user ${member.userID}`);
+                        }
+                    } catch (err) {
+                        console.error(`❌ Error decrypting email for user ${member.userID}:`, err);
+                    }
+                } else {
+                    console.warn(`⚠️ No email found for user ${member.userID}`);
+                }
+            }
+            
+            if (notifications.length === 0) {
+                console.warn("⚠️ No notifications were queued. This usually means there are no OTHER active members besides the creator.");
+            } else {
+                await Promise.all(notifications);
+                console.log(`✅ Successfully sent ${notifications.length} notifications.`);
+            }
+        } catch (error) {
+            console.error("❌ Error sending new bounty notifications:", error);
+        }
+
+        return createdBounty;
     }
 
     static async getAllBounties(status) {
@@ -77,11 +143,57 @@ export default class BountyService {
         if (!bounty) throw new Error("Bounty not found");
         if (bounty.status !== 'open') throw new Error("Bounty is not open");
 
-        return await BountyModel.updateBounty(bountyID, {
+        const result = await BountyModel.updateBounty(bountyID, {
             status: 'assigned',
             assignedTo: userID,
             assignedAt: new Date()
         });
+
+        // Fetch users for notifications
+        const assignee = await UserModel.getUserByQuery({ userID: userID });
+        const creator = bounty.creatorID ? await UserModel.getUserByQuery({ userID: bounty.creatorID }) : null;
+
+        // 1. Notify Assignee (In-App)
+        await NotificationService.create({
+            userID: userID,
+            type: 'success',
+            title: 'Bounty Claimed',
+            message: `You have successfully claimed the bounty: ${bounty.title}`,
+            link: `/dashboard/bounties?highlight=${bountyID}`,
+            metadata: { bountyID }
+        });
+
+        // 2. Notify Creator (In-App & Email)
+        if (creator && creator.userID !== userID) {
+            // In-App
+            await NotificationService.create({
+                userID: creator.userID,
+                type: 'info',
+                title: 'Bounty Claimed',
+                message: `${assignee ? assignee.firstName : 'A user'} has claimed your bounty: ${bounty.title}`,
+                link: `/dashboard/bounties?highlight=${bountyID}`,
+                metadata: { bountyID, claimerID: userID }
+            });
+
+            // Email
+            if (creator.email) {
+                try {
+                    const decryptedEmail = AuthService.decryptEmail(creator.email);
+                    if (decryptedEmail) {
+                        await sendBountyClaimedEmail(
+                            decryptedEmail, 
+                            creator.firstName || 'Member', 
+                            bounty, 
+                            assignee ? `${assignee.firstName} ${assignee.lastName}` : 'A member'
+                        );
+                    }
+                } catch (err) {
+                    console.error(`❌ Error sending bounty claimed email to creator ${creator.userID}:`, err);
+                }
+            }
+        }
+
+        return result;
     }
 
     static async submitBounty(bountyID, userID, submissionData) {
@@ -94,10 +206,46 @@ export default class BountyService {
             throw new Error("This bounty is assigned to someone else.");
         }
 
-        return await BountyModel.updateBounty(bountyID, {
+        const result = await BountyModel.updateBounty(bountyID, {
             status: 'completed', // Pending verification
             submissions: [...(bounty.submissions || []), { userID, ...submissionData, date: new Date() }]
         });
+
+        // Notify Creator
+        if (bounty.creatorID && bounty.creatorID !== userID) {
+            // Fetch users
+            const submitter = await UserModel.getUserByQuery({ userID: userID });
+            const creator = await UserModel.getUserByQuery({ userID: bounty.creatorID });
+
+            // In-App
+            await NotificationService.create({
+                userID: bounty.creatorID,
+                type: 'info',
+                title: 'Bounty Submitted',
+                message: `Work has been submitted for your bounty: ${bounty.title}`,
+                link: `/dashboard/bounties?highlight=${bountyID}`,
+                metadata: { bountyID, submitterID: userID }
+            });
+
+            // Email
+            if (creator && creator.email) {
+                try {
+                    const decryptedEmail = AuthService.decryptEmail(creator.email);
+                    if (decryptedEmail) {
+                        await sendBountySubmittedEmail(
+                            decryptedEmail,
+                            creator.firstName || 'Member',
+                            bounty,
+                            submitter ? `${submitter.firstName} ${submitter.lastName}` : 'A member'
+                        );
+                    }
+                } catch (err) {
+                    console.error(`❌ Error sending bounty submitted email to creator ${creator.userID}:`, err);
+                }
+            }
+        }
+
+        return result;
     }
 
     static async verifyBounty(bountyID, verifierID) {
@@ -138,6 +286,32 @@ export default class BountyService {
                 }
 
                 await UserModel.updateUser({ userID: assigneeID }, updates);
+
+                // Notify Assignee
+                await NotificationService.create({
+                    userID: assigneeID,
+                    type: 'success',
+                    title: 'Bounty Verified!',
+                    message: `Your work on "${bounty.title}" has been verified. You received ${bounty.stakeValue} Stake and ${bounty.rewardValue} ${bounty.rewardType === 'hours' ? 'Hours' : ''}.`,
+                    link: `/dashboard/bounties?highlight=${bountyID}`,
+                    metadata: { bountyID }
+                });
+
+                // Email Assignee
+                if (user.email) {
+                    try {
+                        const decryptedEmail = AuthService.decryptEmail(user.email);
+                        if (decryptedEmail) {
+                            await sendBountyVerifiedEmail(
+                                decryptedEmail,
+                                user.firstName || 'Member',
+                                bounty
+                            );
+                        }
+                    } catch (err) {
+                        console.error(`❌ Error sending bounty verified email to assignee ${assigneeID}:`, err);
+                    }
+                }
             }
         }
 

@@ -51,6 +51,11 @@ class Database {
         await this.connect(); // ✅ Ensure the database connection is established before returning the collection
         return this._instance.collection("plans");
     }
+
+    async dbNotifications() {
+        await this.connect();
+        return this._instance.collection("notifications");
+    }
 }
 
 export const db = new Database();

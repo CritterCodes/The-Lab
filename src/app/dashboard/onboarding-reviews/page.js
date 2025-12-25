@@ -12,6 +12,7 @@ import PendingIcon from '@mui/icons-material/Pending';
 import SearchIcon from '@mui/icons-material/Search';
 import EmailIcon from '@mui/icons-material/Email';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import ReviewDialog from '../../components/admin/ReviewDialog';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -59,6 +60,29 @@ export default function OnboardingReviewsPage() {
     const handleReviewClick = (user) => {
         setSelectedUser(user);
         setDialogOpen(true);
+    };
+
+    const handleNudge = async (e, user) => {
+        e.stopPropagation();
+        if (!confirm(`Send a reminder email to ${user.firstName}?`)) return;
+
+        try {
+            const response = await fetch('/api/v1/users/nudge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userID: user.userID })
+            });
+            
+            if (response.ok) {
+                alert(`Nudge sent to ${user.firstName}!`);
+            } else {
+                const data = await response.json();
+                alert(`Failed to send nudge: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error sending nudge:", error);
+            alert("Error sending nudge.");
+        }
     };
 
     const handleToggleReviewStatus = async (user) => {
@@ -138,14 +162,21 @@ export default function OnboardingReviewsPage() {
         {
             field: 'actions',
             headerName: 'Actions',
-            flex: 0.5,
+            flex: 0.7,
             sortable: false,
             renderCell: (params) => (
-                <Tooltip title="Review Application">
-                    <IconButton onClick={() => handleReviewClick(params.row)}>
-                        <VisibilityIcon />
-                    </IconButton>
-                </Tooltip>
+                <Box>
+                    <Tooltip title="Review Application">
+                        <IconButton onClick={() => handleReviewClick(params.row)}>
+                            <VisibilityIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Send Reminder (Nudge)">
+                        <IconButton onClick={(e) => handleNudge(e, params.row)} color="warning">
+                            <NotificationsActiveIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
             )
         }
     ];
@@ -206,9 +237,14 @@ export default function OnboardingReviewsPage() {
                                                     />
                                                 </Box>
                                             </Box>
-                                            <IconButton onClick={() => handleReviewClick(user)} color="primary">
-                                                <VisibilityIcon />
-                                            </IconButton>
+                                            <Box>
+                                                <IconButton onClick={() => handleReviewClick(user)} color="primary">
+                                                    <VisibilityIcon />
+                                                </IconButton>
+                                                <IconButton onClick={(e) => handleNudge(e, user)} color="warning">
+                                                    <NotificationsActiveIcon />
+                                                </IconButton>
+                                            </Box>
                                         </Box>
 
                                         <Stack spacing={1}>

@@ -73,6 +73,23 @@ export default class UserModel {
     }
 
     /**
+     * ✅ Get all active members (active or probation)
+     * @returns {Array} - Array of active users
+     */
+    static getActiveMembers = async () => {
+        try {
+            const dbUsers = await db.dbUsers();
+            const users = await dbUsers.find({
+                "membership.status": { $in: ["active", "probation"] }
+            }).toArray();
+            return users;
+        } catch (error) {
+            console.error("Error retrieving active members:", error);
+            return [];
+        }
+    }
+
+    /**
      * ✅ Update a user's data
      * @param {Object} query - Query to find the user
      * @param {Object} updateData - Data to update

@@ -2,8 +2,17 @@
 
 import User from "./class";
 import UserModel from "./model";
+import Constants from "@/lib/constants";
 import AuthService from '../../auth/[...nextauth]/service.js';
 import DiscordService from "@/lib/discord";
+import { 
+    sendApplicationReceivedEmail, 
+    sendStatusChangeEmail, 
+    sendProfileCompletionEmail,
+    sendNudgeEmail,
+    sendAdminNotificationEmail,
+    sendVolunteerHoursApprovedEmail
+} from "@/app/utils/email.util";
 
 export default class UserService {
     /**
@@ -116,6 +125,14 @@ export default class UserService {
             
             const currentUser = await UserModel.getUserByQuery(searchObj);
             
+            // Track changes for notifications
+            let statusChanged = false;
+            let applicationSubmitted = false;
+            let hasNewPendingLog = false;
+            let approvedLogs = [];
+            let oldStatus = currentUser?.membership?.status;
+            let newStatus = oldStatus;
+
             if (currentUser && updateData.membership) {
                 // Merge membership data
                 const mergedMembership = {
@@ -127,6 +144,37 @@ export default class UserService {
                     }
                 };
 
+                // Check for volunteer log changes
+                if (updateData.membership.volunteerLog) {
+                    const oldLogs = currentUser.membership.volunteerLog || [];
+                    const newLogs = updateData.membership.volunteerLog;
+                    
+                    // 1. Check for new pending logs (Admin Notification)
+                    if (newLogs.length > oldLogs.length) {
+                        const oldIds = new Set(oldLogs.map(l => l.id));
+                        const addedLogs = newLogs.filter(l => !oldIds.has(l.id));
+                        
+                        if (addedLogs.some(l => l.status === 'pending')) {
+                            hasNewPendingLog = true;
+                        }
+                    }
+
+                    // 2. Check for approved logs (User Notification)
+                    const oldLogMap = new Map(oldLogs.map(l => [l.id, l]));
+                    for (const newLog of newLogs) {
+                        const oldLog = oldLogMap.get(newLog.id);
+                        // If it existed before as pending, and is now approved
+                        if (oldLog && oldLog.status === 'pending' && newLog.status === 'approved') {
+                            approvedLogs.push(newLog);
+                        }
+                    }
+                }
+
+                // Check if application was just submitted
+                if (!currentUser.membership?.applicationDate && mergedMembership.applicationDate) {
+                    applicationSubmitted = true;
+                }
+
                 // Check if we should auto-update status
                 const currentStatus = currentUser.membership?.status;
                 const isManualStatus = currentStatus === 'probation' || currentStatus === 'suspended';
@@ -135,7 +183,7 @@ export default class UserService {
                 // Actually, if the user is in probation, we shouldn't auto-promote them.
                 
                 if (!isManualStatus) {
-                    let newStatus = 'registered';
+                    newStatus = 'registered';
                     
                     if (mergedMembership.applicationDate) newStatus = 'applicant';
                     if (mergedMembership.contacted) newStatus = 'contacted';
@@ -151,6 +199,16 @@ export default class UserService {
                     mergedMembership.status = newStatus;
                 }
                 
+                // Check if status changed (either by auto-calc or manual override in updateData)
+                if (updateData.membership.status) {
+                     // If manual override was provided, use it
+                     newStatus = updateData.membership.status;
+                }
+                
+                if (oldStatus !== newStatus) {
+                    statusChanged = true;
+                }
+
                 // ✅ IMPORTANT: Update the updateData with the fully merged membership object
                 // This prevents MongoDB from replacing the entire membership object with just the partial update
                 updateData.membership = mergedMembership;
@@ -160,6 +218,60 @@ export default class UserService {
             if(updatedUser) {
                 updatedUser.email = AuthService.decryptEmail(updatedUser.email);
                 if(updatedUser.phoneNumber) updatedUser.phoneNumber = AuthService.decryptPhone(updatedUser.phoneNumber);
+
+                // ✅ Send Notifications
+                if (applicationSubmitted) {
+                    // Notify User
+                    sendApplicationReceivedEmail(updatedUser.email, updatedUser.firstName).catch(console.error);
+                    
+                    // Notify Admin
+                    sendAdminNotificationEmail(
+                        "New Membership Application",
+                        `${updatedUser.firstName} ${updatedUser.lastName} has submitted a new membership application. Please review it.`,
+                        `${process.env.NEXT_PUBLIC_URL}/dashboard/onboarding-reviews`,
+                        "Review Application"
+                    ).catch(console.error);
+                }
+
+                if (hasNewPendingLog) {
+                    // Notify Admin
+                    sendAdminNotificationEmail(
+                        "New Volunteer Hours Submitted",
+                        `${updatedUser.firstName} ${updatedUser.lastName} has submitted new volunteer hours for approval.`,
+                        `${process.env.NEXT_PUBLIC_URL}/dashboard/volunteers`,
+                        "Review Hours"
+                    ).catch(console.error);
+                }
+
+                if (statusChanged) {
+                    sendStatusChangeEmail(updatedUser.email, updatedUser.firstName, newStatus).catch(console.error);
+
+                    // If status changed to 'probation' (new member), send profile reminder AND notify admin to issue key
+                    if (newStatus === 'probation') {
+                        sendProfileCompletionEmail(updatedUser.email, updatedUser.firstName, updatedUser.userID).catch(console.error);
+                        
+                        // Notify Admin
+                        sendAdminNotificationEmail(
+                            "New Member - Access Key Needed",
+                            `${updatedUser.firstName} ${updatedUser.lastName} has completed onboarding and payment. They are now a Probationary Member and need an Access Key issued.`,
+                            `${process.env.NEXT_PUBLIC_URL}/dashboard/members`,
+                            "Manage Member"
+                        ).catch(console.error);
+                    }
+                }
+
+                // 5. Send Volunteer Hours Approved Email (To User)
+                if (approvedLogs.length > 0) {
+                    // Send an email for each approved log
+                    for (const log of approvedLogs) {
+                        sendVolunteerHoursApprovedEmail(
+                            updatedUser.email,
+                            updatedUser.firstName,
+                            log.hours,
+                            log.description
+                        ).catch(console.error);
+                    }
+                }
 
                 // ✅ Sync Discord Roles
                 if (updatedUser.discordId) {
@@ -195,6 +307,119 @@ export default class UserService {
         } catch (error) {
             console.error("Error in UserService.deleteUser:", error);
             throw new Error("Failed to delete user.");
+        }
+    }
+
+    /**
+     * ✅ Nudge a user based on their current status
+     * @param {string} userID - The ID of the user to nudge
+     */
+    static nudgeUser = async (userID) => {
+        try {
+            const user = await this.getUserByQuery({ userID });
+            if (!user) throw new Error("User not found");
+
+            const status = user.membership?.status || 'registered';
+            let step = '';
+            let message = '';
+            let actionLink = '';
+            let actionText = '';
+
+            switch (status) {
+                case 'registered':
+                    step = 'Complete Questionnaire';
+                    message = 'We noticed you haven\'t completed your membership application yet. Tell us a bit about yourself to get started!';
+                    actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/onboarding`;
+                    actionText = 'Complete Questionnaire';
+                    break;
+                case 'contacted':
+                    step = 'Schedule Orientation';
+                    message = 'Your application has been approved! The next step is to schedule your safety orientation at the lab.';
+                    actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/appointments`;
+                    actionText = 'Schedule Orientation';
+                    break;
+                case 'onboarding':
+                    step = 'Subscribe to Membership';
+                    message = 'You have completed your orientation! The final step is to select a membership plan and set up payment.';
+                    actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/${userID}/profile?tab=1`;
+                    actionText = 'Subscribe';
+                    break;
+                case 'probation':
+                case 'active':
+                    // 1. Check Profile Completion First
+                    // We consider profile incomplete if bio or image is missing
+                    if (!user.bio || !user.image) {
+                        step = 'Complete Profile';
+                        message = 'Make the most of your membership by completing your public profile. It helps other members find you for collaboration!';
+                        actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/${userID}/profile`;
+                        actionText = 'Edit Profile';
+                        break; // Exit switch, send profile nudge
+                    }
+
+                    // 2. Check Volunteer Hours
+                    const volunteerLogs = user.membership?.volunteerLog || [];
+                    
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    const currentMonthLogs = volunteerLogs.filter(log => {
+                        if (!log.date) return false;
+                        const logDate = new Date(log.date);
+                        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
+                    });
+
+                    const totalHours = currentMonthLogs.reduce((acc, log) => acc + (parseFloat(log.hours) || 0), 0);
+                    const requiredHours = Constants.REQUIRED_VOLUNTEER_HOURS || 4;
+                    const hoursNeeded = requiredHours - totalHours;
+
+                    if (hoursNeeded > 0) {
+                        step = 'Volunteer Hours Needed';
+                        actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/bounties`;
+                        actionText = 'View Bounties';
+
+                        if (status === 'probation') {
+                            // Probation specific message
+                            if (totalHours === 0) {
+                                message = `You haven't logged any volunteer hours this month. You need ${requiredHours} hours to qualify for your access key. Check out the available bounties!`;
+                            } else {
+                                message = `You're almost there! You only need ${hoursNeeded} more volunteer hour${hoursNeeded === 1 ? '' : 's'} to qualify for your access key.`;
+                            }
+                        } else {
+                            // Active specific message
+                            if (totalHours === 0) {
+                                message = `You haven't logged any volunteer hours this month yet. You need ${requiredHours} hours every month to maintain your membership. Check out the available bounties!`;
+                            } else {
+                                message = `You're doing great! You only need ${hoursNeeded} more volunteer hour${hoursNeeded === 1 ? '' : 's'} to meet your monthly goal. Check out the bounties to finish up!`;
+                            }
+                        }
+                    } else {
+                        // Fallback if everything is good (maybe nudge to check events? or just profile again?)
+                        // For now, let's default to profile but with a "All good" vibe? 
+                        // Or actually, if they are all good, maybe we shouldn't nudge? 
+                        // But the UI expects a nudge. Let's stick to Profile as a generic "keep it updated"
+                        step = 'Update Profile';
+                        message = 'Your membership is in good standing! Why not update your profile with your latest projects?';
+                        actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/${userID}/profile`;
+                        actionText = 'Edit Profile';
+                    }
+                    break;
+                default:
+                    throw new Error("No nudge action available for this status.");
+            }
+
+            if (user.email) {
+                const decryptedEmail = AuthService.decryptEmail(user.email);
+                if (decryptedEmail) {
+                    await sendNudgeEmail(decryptedEmail, user.firstName, step, message, actionLink, actionText);
+                    return { success: true, message: `Nudge sent for ${step}` };
+                }
+            }
+            throw new Error("User has no valid email.");
+
+        } catch (error) {
+            console.error("Error in UserService.nudgeUser:", error);
+            throw error;
         }
     }
 

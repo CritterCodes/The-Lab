@@ -12,7 +12,8 @@ const Constants = {
         'Crafter': '1453265133366411275',
         'Artist': '1453264892059582536',
     },
-    LAB_RATZ_ROLE_ID: '1348382987611275386'
+    LAB_RATZ_ROLE_ID: '1348382987611275386',
+    REQUIRED_VOLUNTEER_HOURS: 4
 };
 
 export default Constants;
