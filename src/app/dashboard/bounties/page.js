@@ -18,10 +18,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function BountiesPage() {
     const { data: session } = useSession();
     const theme = useTheme();
+    const searchParams = useSearchParams();
+    const highlightId = searchParams.get('highlight');
+    
     const [bounties, setBounties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userMembership, setUserMembership] = useState(null);
@@ -40,6 +44,15 @@ export default function BountiesPage() {
         stakeValue: 0, // Default additional stake is 0
         recurrence: 'none'
     });
+
+    useEffect(() => {
+        if (highlightId && bounties.length > 0) {
+            const element = document.getElementById(`bounty-${highlightId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [highlightId, bounties]);
 
     useEffect(() => {
         const init = async () => {
@@ -258,15 +271,19 @@ export default function BountiesPage() {
                         const isAdmin = session?.user?.role === 'admin';
                         const canEdit = isCreator || isAdmin;
                         const canClawback = (isCreator || isAdmin) && bounty.status === 'assigned';
+                        const isHighlighted = highlightId === bounty.bountyID;
 
                         return (
-                            <Grid item xs={12} md={6} lg={4} key={bounty.bountyID}>
+                            <Grid item xs={12} md={6} lg={4} key={bounty.bountyID} id={`bounty-${bounty.bountyID}`}>
                                 <Card sx={{ 
                                     height: '100%', 
                                     display: 'flex', 
                                     flexDirection: 'column',
-                                    border: bounty.rewardType === 'hours' ? '1px solid #4caf50' : '1px solid #9c27b0',
-                                    opacity: bounty.status === 'completed' ? 0.8 : 1
+                                    border: isHighlighted ? `2px solid ${theme.palette.primary.main}` : (bounty.rewardType === 'hours' ? '1px solid #4caf50' : '1px solid #9c27b0'),
+                                    boxShadow: isHighlighted ? `0 0 20px ${theme.palette.primary.main}` : 'none',
+                                    opacity: bounty.status === 'completed' ? 0.8 : 1,
+                                    transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
+                                    transition: 'all 0.3s ease-in-out'
                                 }}>
                                     <CardContent sx={{ flexGrow: 1 }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
