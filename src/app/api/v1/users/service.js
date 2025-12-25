@@ -432,11 +432,9 @@ export default class UserService {
             }
 
             if (user.email) {
-                const decryptedEmail = AuthService.decryptEmail(user.email);
-                if (decryptedEmail) {
-                    await sendNudgeEmail(decryptedEmail, user.firstName, step, message, actionLink, actionText);
-                    return { success: true, message: `Nudge sent for ${step}` };
-                }
+                // Email is already decrypted by getUserByQuery
+                await sendNudgeEmail(user.email, user.firstName, step, message, actionLink, actionText);
+                return { success: true, message: `Nudge sent for ${step}` };
             }
             throw new Error("User has no valid email.");
 
