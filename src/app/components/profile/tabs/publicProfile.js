@@ -32,10 +32,19 @@ const PublicProfileTab = ({ user, onEdit }) => {
         onEdit("skills", newValue);
     };
 
+    const handleHobbiesChange = (event, newValue) => {
+        onEdit("hobbies", newValue);
+    };
+
     const commonSkills = [
         "3D Printing", "Laser Cutting", "CNC Machining", "Woodworking", "Metalworking",
         "Electronics", "Arduino", "Raspberry Pi", "Programming", "Web Development",
         "Graphic Design", "CAD/CAM", "Sewing", "Embroidery", "Vinyl Cutting"
+    ];
+
+    const commonHobbies = [
+        "Gaming", "Reading", "Hiking", "Cooking", "Traveling", "Photography", 
+        "Music", "Art", "Gardening", "DIY", "Robotics", "Cosplay", "Board Games"
     ];
 
     return (
@@ -102,6 +111,31 @@ const PublicProfileTab = ({ user, onEdit }) => {
                                 label="Skills" 
                                 placeholder="Add skills..." 
                                 helperText="Press Enter to add custom skills"
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid item xs={12}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>Hobbies & Interests</Typography>
+                    <Autocomplete
+                        multiple
+                        freeSolo
+                        options={commonHobbies}
+                        value={user.hobbies || []}
+                        onChange={handleHobbiesChange}
+                        renderTags={(value, getTagProps) =>
+                            value.map((option, index) => (
+                                <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                            ))
+                        }
+                        renderInput={(params) => (
+                            <TextField 
+                                {...params} 
+                                variant="outlined" 
+                                label="Hobbies" 
+                                placeholder="Add hobbies..." 
+                                helperText="Press Enter to add custom hobbies"
                             />
                         )}
                     />

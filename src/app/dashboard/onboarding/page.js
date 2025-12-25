@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
     Container, Typography, Box, TextField, Button, Paper, 
-    Stepper, Step, StepLabel, StepContent, Alert 
+    Stepper, Step, StepLabel, StepContent, Alert, Autocomplete, Chip 
 } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -23,6 +23,17 @@ const steps = [
         description: 'Who should we call in case of an emergency?',
         fields: ['emergencyContactName', 'emergencyContactPhone']
     }
+];
+
+const commonSkills = [
+    "3D Printing", "Laser Cutting", "CNC Machining", "Woodworking", "Metalworking",
+    "Electronics", "Arduino", "Raspberry Pi", "Programming", "Web Development",
+    "Graphic Design", "CAD/CAM", "Sewing", "Embroidery", "Vinyl Cutting"
+];
+
+const commonHobbies = [
+    "Gaming", "Reading", "Hiking", "Cooking", "Traveling", "Photography", 
+    "Music", "Art", "Gardening", "DIY", "Robotics", "Cosplay", "Board Games"
 ];
 
 export default function OnboardingPage() {
@@ -64,6 +75,7 @@ export default function OnboardingPage() {
                         emergencyContactPhone: formData.emergencyContactPhone
                     },
                     bio: formData.bio,
+                    skills: formData.skills,
                     hobbies: formData.hobbies,
                     membership: {
                         applicationDate: new Date().toISOString()
@@ -104,17 +116,44 @@ export default function OnboardingPage() {
                             <StepContent>
                                 <Typography>{step.description}</Typography>
                                 <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {step.fields.map((field) => (
-                                        <TextField
-                                            key={field}
-                                            label={field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                            fullWidth
-                                            variant="outlined"
-                                            value={formData[field] || ''}
-                                            onChange={handleChange(field)}
-                                            required
-                                        />
-                                    ))}
+                                    {step.fields.map((field) => {
+                                        if (field === 'skills' || field === 'hobbies') {
+                                            return (
+                                                <Autocomplete
+                                                    key={field}
+                                                    multiple
+                                                    freeSolo
+                                                    options={field === 'skills' ? commonSkills : commonHobbies}
+                                                    value={formData[field] || []}
+                                                    onChange={(event, newValue) => setFormData({ ...formData, [field]: newValue })}
+                                                    renderTags={(value, getTagProps) =>
+                                                        value.map((option, index) => (
+                                                            <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                                                        ))
+                                                    }
+                                                    renderInput={(params) => (
+                                                        <TextField 
+                                                            {...params} 
+                                                            variant="outlined" 
+                                                            label={field.charAt(0).toUpperCase() + field.slice(1)}
+                                                            placeholder={`Add ${field}...`} 
+                                                        />
+                                                    )}
+                                                />
+                                            );
+                                        }
+                                        return (
+                                            <TextField
+                                                key={field}
+                                                label={field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                fullWidth
+                                                variant="outlined"
+                                                value={formData[field] || ''}
+                                                onChange={handleChange(field)}
+                                                required
+                                            />
+                                        );
+                                    })}
                                 </Box>
                                 <Box sx={{ mb: 2, mt: 3 }}>
                                     <Button
