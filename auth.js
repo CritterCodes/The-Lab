@@ -4,6 +4,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import DiscordProvider from 'next-auth/providers/discord'; // Added Discord provider
 import CredentialsProvider from 'next-auth/providers/credentials';
 import UsersService from '@/app/api/v1/users/service'; // Import Server Service
+import AuthController from '@/app/api/auth/[...nextauth]/controller'; // Import Auth Controller
 import DiscordService from '@/lib/discord';
 
 const baseURL = `${process.env.NEXT_PUBLIC_URL}`;
@@ -17,62 +18,47 @@ const providers = [
                 console.log("Google Profile:", profile);
 
                 // ✅ Check if user exists in the database
-                const response = await fetch(`${baseURL}/api/v1/users?email=${profile.email}`, {
-                    method: "GET",
-                    headers: { "Content-Type": "application/json" }
-                });
-
-                const existingUser = await response.json();
+                const existingUser = await UsersService.getUserByQuery({ email: profile.email });
                 console.log("Existing User:", existingUser);
 
-                if (!response.ok || existingUser.length === 0) {
+                if (!existingUser) {
                     // ✅ Create the user if not found
-                    const createResponse = await fetch(`${baseURL}/api/auth/register`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                            firstName: profile.given_name,
-                            lastName: profile.family_name,
-                            username: '',
-                            email: profile.email,
-                            provider: 'google',
-                            googleId: profile.sub,
-                            status: "verified",
-                            image: profile.picture
-                        }),
-                        headers: { "Content-Type": "application/json" }
+                    const newUser = await AuthController.register({
+                        firstName: profile.given_name,
+                        lastName: profile.family_name,
+                        username: '',
+                        email: profile.email,
+                        provider: 'google',
+                        googleId: profile.sub,
+                        status: "verified",
+                        image: profile.picture
                     });
-                    console.log("Create Response:", createResponse);
-                    if (!createResponse.ok) {
-                        throw new Error("Failed to create user.");
-                    }
-
-                    const newUser = await createResponse.json();
+                    
                     console.log("New User:", newUser);
                     return {
-                        userID: newUser.user.userID,
-                        name: `${newUser.user.firstName} ${newUser.user.lastName}`,
-                        username: newUser.user.username,
-                        email: newUser.user.email,
-                        role: newUser.user.role,
+                        userID: newUser.userID,
+                        name: `${newUser.firstName} ${newUser.lastName}`,
+                        username: newUser.username,
+                        email: profile.email, // Use profile.email as newUser.email is encrypted
+                        role: newUser.role,
                         image: profile.picture
                     };
                 }
 
                 // ✅ Return existing user data
-                const user = existingUser.user;
+                const user = existingUser;
 
                 // ✅ Backwards Compatibility: Update user if provider is missing or image is missing
                 if (!user.provider || !user.googleId || !user.image) {
                     console.log("Updating existing user with Google provider info...");
-                    await fetch(`${baseURL}/api/v1/users?userID=${user.userID}`, {
-                        method: "PUT",
-                        body: JSON.stringify({
+                    await UsersService.updateUser(
+                        { userID: user.userID },
+                        {
                             provider: 'google',
                             googleId: profile.sub,
                             image: user.image || profile.picture
-                        }),
-                        headers: { "Content-Type": "application/json" }
-                    });
+                        }
+                    );
                 }
 
                 return {
@@ -98,65 +84,50 @@ const providers = [
             console.log("Discord Profile:", profile);
 
             // ✅ Check if user exists in the database
-            const response = await fetch(`${baseURL}/api/v1/users?email=${profile.email}`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json" }
-            });
-
-            const existingUser = await response.json();
+            const existingUser = await UsersService.getUserByQuery({ email: profile.email });
             console.log("Existing User:", existingUser);
 
 
-            if (!response.ok || existingUser.length === 0) {
+            if (!existingUser) {
                 // ✅ Create the user if not found
-                const createResponse = await fetch(`${baseURL}/api/auth/register`, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        firstName: '',
-                        lastName: '',
-                        username: profile.username,
-                        email: profile.email,
-                        provider: 'discord',
-                        discordHandle: profile.username,
-                        discordId: profile.id,
-                        status: "verified",
-                        image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
-                    }),
-                    headers: { "Content-Type": "application/json" }
+                const newUser = await AuthController.register({
+                    firstName: '',
+                    lastName: '',
+                    username: profile.username,
+                    email: profile.email,
+                    provider: 'discord',
+                    discordHandle: profile.username,
+                    discordId: profile.id,
+                    status: "verified",
+                    image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
                 });
-                console.log("Create Response:", createResponse);
-                if (!createResponse.ok) {
-                    throw new Error("Failed to create user.");
-                }
 
-                const newUser = await createResponse.json();
                 console.log("New User:", newUser);
                 return {
-                    userID: newUser.user.userID,
-                    name: `${newUser.user.firstName} ${newUser.user.lastName}`,
-                    username: newUser.user.username,
-                    email: newUser.user.email,
-                    role: newUser.user.role,
+                    userID: newUser.userID,
+                    name: `${newUser.firstName} ${newUser.lastName}`,
+                    username: newUser.username,
+                    email: profile.email, // Use profile.email as newUser.email is encrypted
+                    role: newUser.role,
                     image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
                 };
             }
 
             // ✅ Return existing user data
-            const user = existingUser.user;
+            const user = existingUser;
 
             // ✅ Backwards Compatibility: Update user if provider or discordHandle is missing or image is missing
             if (!user.provider || !user.discordHandle || !user.discordId || !user.image) {
                 console.log("Updating existing user with Discord provider info...");
-                await fetch(`${baseURL}/api/v1/users?userID=${user.userID}`, {
-                    method: "PUT",
-                    body: JSON.stringify({
+                await UsersService.updateUser(
+                    { userID: user.userID },
+                    {
                         provider: 'discord',
                         discordHandle: profile.username,
                         discordId: profile.id,
                         image: user.image || (profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null)
-                    }),
-                    headers: { "Content-Type": "application/json" }
-                });
+                    }
+                );
             }
 
             return {
