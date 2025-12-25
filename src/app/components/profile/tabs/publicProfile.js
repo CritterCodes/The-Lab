@@ -97,7 +97,7 @@ const PublicProfileTab = ({ user, onEdit }) => {
                         multiple
                         freeSolo
                         options={commonSkills}
-                        value={user.skills || []}
+                        value={Array.isArray(user.skills) ? user.skills : []}
                         onChange={handleSkillsChange}
                         renderTags={(value, getTagProps) =>
                             value.map((option, index) => (
@@ -122,7 +122,7 @@ const PublicProfileTab = ({ user, onEdit }) => {
                         multiple
                         freeSolo
                         options={commonHobbies}
-                        value={user.hobbies || []}
+                        value={Array.isArray(user.hobbies) ? user.hobbies : []}
                         onChange={handleHobbiesChange}
                         renderTags={(value, getTagProps) =>
                             value.map((option, index) => (
