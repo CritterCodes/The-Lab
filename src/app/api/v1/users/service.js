@@ -313,8 +313,9 @@ export default class UserService {
     /**
      * ✅ Nudge a user based on their current status
      * @param {string} userID - The ID of the user to nudge
+     * @param {boolean} preview - If true, returns the nudge details without sending email
      */
-    static nudgeUser = async (userID) => {
+    static nudgeUser = async (userID, preview = false) => {
         try {
             const user = await this.getUserByQuery({ userID });
             if (!user) throw new Error("User not found");
@@ -339,11 +340,19 @@ export default class UserService {
                     actionText = 'Schedule Orientation';
                     break;
                 case 'onboarding':
-                    step = 'Subscribe to Membership';
-                    message = 'You have completed your orientation! The final step is to select a membership plan and set up payment.';
-                    actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/${userID}/profile?tab=1`;
-                    actionText = 'Subscribe';
-                    break;
+                    // Check if they already have a subscription (even if status hasn't updated yet)
+                    const hasSubscription = user.membership?.subscriptionStatus === 'ACTIVE' || 
+                                          user.membership?.isWaived || 
+                                          (user.membership?.sponsorshipExpiresAt && new Date(user.membership.sponsorshipExpiresAt) > new Date());
+
+                    if (!hasSubscription) {
+                        step = 'Subscribe to Membership';
+                        message = 'You have completed your orientation! The final step is to select a membership plan and set up payment.';
+                        actionLink = `${process.env.NEXT_PUBLIC_URL}/dashboard/${userID}/profile?tab=1`;
+                        actionText = 'Subscribe';
+                        break;
+                    }
+                    // If they have a subscription, fall through to probation/active logic
                 case 'probation':
                 case 'active':
                     // 1. Check Profile Completion First
@@ -406,6 +415,20 @@ export default class UserService {
                     break;
                 default:
                     throw new Error("No nudge action available for this status.");
+            }
+
+            if (preview) {
+                return { 
+                    success: true, 
+                    preview: true,
+                    details: {
+                        step,
+                        message,
+                        actionLink,
+                        actionText,
+                        recipient: user.firstName
+                    }
+                };
             }
 
             if (user.email) {

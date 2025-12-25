@@ -15,6 +15,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import NudgeConfirmDialog from './NudgeConfirmDialog';
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -42,6 +43,11 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
     const [formData, setFormData] = useState(null);
     const [newLog, setNewLog] = useState({ hours: '', description: '', date: new Date().toISOString().split('T')[0] });
     const [tabValue, setTabValue] = useState(0);
+    
+    // Nudge State
+    const [nudgeDialogOpen, setNudgeDialogOpen] = useState(false);
+    const [nudgeDetails, setNudgeDetails] = useState(null);
+    const [nudgeLoading, setNudgeLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -101,17 +107,44 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
     };
 
     const handleNudge = async () => {
-        if (!confirm(`Send a reminder email to ${user.firstName}?`)) return;
-
         try {
+            setNudgeLoading(true);
+            // 1. Preview the nudge first
+            const previewResponse = await fetch('/api/v1/users/nudge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userID: user.userID, preview: true })
+            });
+
+            const previewData = await previewResponse.json();
+
+            if (!previewResponse.ok) {
+                alert(`Failed to preview nudge: ${previewData.error}`);
+                return;
+            }
+
+            setNudgeDetails(previewData.details);
+            setNudgeDialogOpen(true);
+        } catch (error) {
+            console.error("Error preparing nudge:", error);
+            alert("Error preparing nudge.");
+        } finally {
+            setNudgeLoading(false);
+        }
+    };
+
+    const handleConfirmNudge = async () => {
+        try {
+            setNudgeLoading(true);
             const response = await fetch('/api/v1/users/nudge', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userID: user.userID })
+                body: JSON.stringify({ userID: user.userID, preview: false })
             });
             
             if (response.ok) {
                 alert(`Nudge sent to ${user.firstName}!`);
+                setNudgeDialogOpen(false);
             } else {
                 const data = await response.json();
                 alert(`Failed to send nudge: ${data.error}`);
@@ -119,6 +152,8 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
         } catch (error) {
             console.error("Error sending nudge:", error);
             alert("Error sending nudge.");
+        } finally {
+            setNudgeLoading(false);
         }
     };
 
@@ -685,6 +720,14 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                     </Button>
                 </DialogActions>
             )}
+
+            <NudgeConfirmDialog 
+                open={nudgeDialogOpen}
+                onClose={() => setNudgeDialogOpen(false)}
+                onConfirm={handleConfirmNudge}
+                nudgeDetails={nudgeDetails}
+                loading={nudgeLoading}
+            />
         </Dialog>
     );
 }

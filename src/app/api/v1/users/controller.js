@@ -202,12 +202,12 @@ export default class UserController {
      */
     static nudgeUser = async (req) => {
         try {
-            const { userID } = await req.json();
+            const { userID, preview } = await req.json();
             if (!userID) {
                 return new Response(JSON.stringify({ error: "UserID is required" }), { status: 400 });
             }
 
-            const result = await UserService.nudgeUser(userID);
+            const result = await UserService.nudgeUser(userID, preview);
             return new Response(JSON.stringify(result), { status: 200 });
         } catch (error) {
             console.error("Error in UserController.nudgeUser:", error);
