@@ -108,10 +108,10 @@ const DashboardPage = ({ params }) => {
   return (
     <Box
       sx={{
-        padding: "2rem",
+        padding: { xs: 2, md: 4 },
         display: "flex",
         flexDirection: "column",
-        gap: "2rem",
+        gap: { xs: 2, md: 3 },
         backgroundColor: theme.palette.background.default,
         color: theme.palette.text.primary,
         minHeight: "100vh",
@@ -123,19 +123,49 @@ const DashboardPage = ({ params }) => {
           display: "flex",
           alignItems: "center",
           gap: "1rem",
-          marginBottom: "1rem",
+          marginBottom: { xs: 1, md: 2 },
         }}
       >
-        <Typography variant="h4" component="h1">
+        <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+                fontSize: { xs: '1.5rem', md: '2.125rem' },
+                wordBreak: 'break-word'
+            }}
+        >
           Welcome, {displayName}!
         </Typography>
       </Box>
 
       {/* Membership Progress */}
       {showProgress && (
-      <Card variant="outlined" sx={{ mb: 3, p: 2, backgroundColor: theme.palette.background.paper, border: `1px solid ${theme.palette.primary.main}` }}>
+      <Card variant="outlined" sx={{ mb: 3, p: { xs: 1, md: 2 }, backgroundColor: theme.palette.background.paper, border: `1px solid ${theme.palette.primary.main}` }}>
           <Typography variant="h6" gutterBottom color="primary">Membership Progress</Typography>
-          <Stepper activeStep={activeStep} alternativeLabel sx={{
+          <Stepper 
+            activeStep={activeStep} 
+            alternativeLabel={false} 
+            orientation="vertical"
+            sx={{
+              display: { xs: 'flex', md: 'none' },
+              '& .MuiStepLabel-label': { color: 'text.secondary' },
+              '& .MuiStepLabel-label.Mui-active': { color: 'primary.main' },
+              '& .MuiStepLabel-label.Mui-completed': { color: 'primary.main' },
+              '& .MuiStepIcon-root': { color: 'gray' },
+              '& .MuiStepIcon-root.Mui-active': { color: 'primary.main' },
+              '& .MuiStepIcon-root.Mui-completed': { color: 'primary.main' },
+          }}>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+          <Stepper 
+            activeStep={activeStep} 
+            alternativeLabel 
+            sx={{
+              display: { xs: 'none', md: 'flex' },
               '& .MuiStepLabel-label': { color: 'text.secondary' },
               '& .MuiStepLabel-label.Mui-active': { color: 'primary.main' },
               '& .MuiStepLabel-label.Mui-completed': { color: 'primary.main' },
