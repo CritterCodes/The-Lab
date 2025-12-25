@@ -14,7 +14,18 @@ import {
   Step,
   StepLabel,
   Alert,
+  IconButton,
+  Paper
 } from "@mui/material";
+import { 
+    Person as PersonIcon, 
+    CardMembership as MembershipIcon, 
+    Assignment as BountyIcon, 
+    People as DirectoryIcon, 
+    Help as HelpIcon, 
+    Timer as VolunteerIcon,
+    ArrowForwardIos as ArrowIcon
+} from "@mui/icons-material";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import LoadingTerminal from "@/app/components/LoadingTerminal";
@@ -103,6 +114,45 @@ const DashboardPage = ({ params }) => {
     'First Month Volunteer Requirement',
     'Access Key Issued',
     'Full Access Granted'
+  ];
+
+  const menuItems = [
+      { 
+          title: 'Profile', 
+          icon: <PersonIcon fontSize="large" />, 
+          path: `/dashboard/${session.user.userID}/profile`,
+          desc: 'Manage personal details'
+      },
+      { 
+          title: 'Membership', 
+          icon: <MembershipIcon fontSize="large" />, 
+          path: `/dashboard/${session.user.userID}/profile?tab=1`,
+          desc: 'Plans & Billing'
+      },
+      { 
+          title: 'Bounties', 
+          icon: <BountyIcon fontSize="large" />, 
+          path: `/dashboard/bounties`,
+          desc: 'Earn credits'
+      },
+      { 
+          title: 'Directory', 
+          icon: <DirectoryIcon fontSize="large" />, 
+          path: `/dashboard/directory`,
+          desc: 'Find members'
+      },
+      { 
+          title: 'Volunteer', 
+          icon: <VolunteerIcon fontSize="large" />, 
+          path: `/dashboard/${session.user.userID}/volunteer`,
+          desc: 'Log hours'
+      },
+      { 
+          title: 'Support', 
+          icon: <HelpIcon fontSize="large" />, 
+          action: () => window.open("/api/v1/discord/invite", "_blank"),
+          desc: 'Get help'
+      }
   ];
 
   return (
@@ -246,71 +296,52 @@ const DashboardPage = ({ params }) => {
       </Card>
       )}
 
-      {/* Dashboard Options */}
-      <Grid container spacing={3}>
-        {/* Manage Profile */}
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ height: "100%", backgroundColor: theme.palette.background.paper, border: `1px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom>
-                Manage Profile
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                Update your personal details and customize your profile.
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={() => handleNavigate(`/dashboard/${session.user.userID}/profile`)}
-                sx={{ marginTop: "1rem" }}
-              >
-                Go to Profile
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Manage Membership */}
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ height: "100%", backgroundColor: theme.palette.background.paper, border: `1px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom>
-                Manage Membership
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                View your membership details, update your plan, or change your
-                payment method.
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={() => handleNavigate(`/dashboard/${session.user.userID}/profile?tab=1`)}
-                sx={{ marginTop: "1rem" }}
-              >
-                Manage Membership
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Help or Support */}
-        <Grid item xs={12} md={6}>
-          <Card variant="outlined" sx={{ height: "100%", backgroundColor: theme.palette.background.paper, border: `1px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom>
-                Help & Support
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                Need assistance? Get in touch with our support team.
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={() => window.open("/api/v1/discord/invite", "_blank")}
-                sx={{ marginTop: "1rem" }}
-              >
-                Get Help
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+      {/* Dashboard Options Grid */}
+      <Grid container spacing={2}>
+        {menuItems.map((item) => (
+            <Grid item xs={6} md={4} lg={3} key={item.title}>
+                <Paper
+                    elevation={0}
+                    onClick={() => item.action ? item.action() : handleNavigate(item.path)}
+                    sx={{
+                        p: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: 'rgba(0, 255, 0, 0.02)',
+                        transition: 'all 0.2s ease-in-out',
+                        height: '100%',
+                        minHeight: 140,
+                        '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: `0 4px 20px rgba(0, 255, 0, 0.15)`,
+                            borderColor: theme.palette.primary.main,
+                            backgroundColor: 'rgba(0, 255, 0, 0.05)',
+                        }
+                    }}
+                >
+                    <Box sx={{ 
+                        color: theme.palette.primary.main, 
+                        mb: 1.5,
+                        p: 1.5,
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)'
+                    }}>
+                        {item.icon}
+                    </Box>
+                    <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 'bold', mb: 0.5 }}>
+                        {item.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {item.desc}
+                    </Typography>
+                </Paper>
+            </Grid>
+        ))}
       </Grid>
     </Box>
   );
