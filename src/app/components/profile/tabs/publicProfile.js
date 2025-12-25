@@ -48,7 +48,7 @@ const PublicProfileTab = ({ user, onEdit }) => {
     ];
 
     return (
-        <Box sx={{ padding: 3, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
+        <Box sx={{ padding: { xs: 2, md: 3 }, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
             <Typography variant="h6" gutterBottom sx={{ color: theme.palette.primary.main }}>
                 Public Profile Settings
             </Typography>

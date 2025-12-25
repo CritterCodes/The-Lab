@@ -64,13 +64,13 @@ export default function VolunteerPage({ params }) {
     }
 
     return (
-        <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
-            <Typography variant="h4" gutterBottom>Volunteer Dashboard</Typography>
+        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, margin: '0 auto' }}>
+            <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }} gutterBottom>Volunteer Dashboard</Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
                 Track your volunteer hours and contributions to the FabLab.
             </Typography>
             
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2, md: 3 } }}>
                 <VolunteerLog user={user} onUpdate={handleUpdate} />
             </Paper>
         </Box>

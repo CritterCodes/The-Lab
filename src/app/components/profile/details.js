@@ -12,7 +12,7 @@ const UserDetailsForm = ({ user, onEdit }) => {
     }, [user]);
 
     return (
-        <Box sx={{ flex: 1, padding: 3, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
+        <Box sx={{ flex: 1, padding: { xs: 2, md: 3 }, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
             {/* Grid layout for better spacing and structure */}
             <Grid container spacing={2}>
 
@@ -20,7 +20,7 @@ const UserDetailsForm = ({ user, onEdit }) => {
                 <Grid item xs={12} sm={8}>
                     <Grid container spacing={2}>
                         {/* Name Fields */}
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 label="First Name"
                                 value={user.firstName || ''}
@@ -28,7 +28,7 @@ const UserDetailsForm = ({ user, onEdit }) => {
                                 fullWidth
                             />
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 label="Last Name"
                                 value={user.lastName || ''}
@@ -48,7 +48,7 @@ const UserDetailsForm = ({ user, onEdit }) => {
                         </Grid>
 
                         {/* Contact Information */}
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 label="Email"
                                 value={user.email || ''}
@@ -56,7 +56,7 @@ const UserDetailsForm = ({ user, onEdit }) => {
                                 fullWidth
                             />
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 label="Phone Number"
                                 value={user.phoneNumber || ''}

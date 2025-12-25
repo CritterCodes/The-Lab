@@ -44,10 +44,17 @@ const UserHeader = ({ onSave, hasChanges, activeTab, setActiveTab, user }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
             
             {/* Tabs Section - Integrated into the header */}
-            <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tabs 
+                value={activeTab} 
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{ width: { xs: '100%', md: 'auto' } }}
+            >
                 <Tab label="User Details" />
                 <Tab label="Membership" />
                 <Tab 

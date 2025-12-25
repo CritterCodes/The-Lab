@@ -5,25 +5,42 @@ import {
     Typography, Box, Stepper, Step, StepLabel, StepContent,
     Checkbox, FormControlLabel, TextField, Select, MenuItem,
     InputLabel, FormControl, Chip, Divider, List, ListItem, ListItemText, CircularProgress,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Paper
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Paper,
+    useTheme, useMediaQuery, Tabs, Tab, Card, CardContent, Stack, AppBar, Toolbar
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import HistoryIcon from '@mui/icons-material/History';
+import SettingsIcon from '@mui/icons-material/Settings';
 
-const steps = [
-    { label: 'Account Created', key: 'createdAt' },
-    { label: 'Application Submitted', key: 'applicationDate' },
-    { label: 'Initial Contact / Reviewed', key: 'contacted' },
-    { label: 'Onboarding', key: 'onboardingComplete' },
-    { label: 'Probation (4 Hours)', key: 'probationComplete' },
-    { label: 'Access Key Issued', key: 'accessKey' },
-    { label: 'Full Access Granted', key: 'fullAccess' }
-];
+function TabPanel(props) {
+    const { children, value, index, ...other } = props;
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`simple-tabpanel-${index}`}
+            aria-labelledby={`simple-tab-${index}`}
+            {...other}
+        >
+            {value === index && (
+                <Box sx={{ p: { xs: 2, md: 3 } }}>
+                    {children}
+                </Box>
+            )}
+        </div>
+    );
+}
 
 export default function MemberDialog({ open, onClose, user, onUpdate }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState(null);
     const [newLog, setNewLog] = useState({ hours: '', description: '', date: new Date().toISOString().split('T')[0] });
+    const [tabValue, setTabValue] = useState(0);
 
     useEffect(() => {
         if (user) {
@@ -49,18 +66,6 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                 [field]: value
             }
         }));
-    };
-
-    const getStepStatus = (step, index) => {
-        const m = formData.membership;
-        if (step.key === 'createdAt') return true;
-        if (step.key === 'applicationDate') return !!m.applicationDate;
-        if (step.key === 'contacted') return !!m.contacted || m.reviewStatus === 'reviewed';
-        if (step.key === 'onboardingComplete') return !!m.onboardingComplete;
-        if (step.key === 'probationComplete') return totalHours >= 4;
-        if (step.key === 'accessKey') return !!m.accessKey?.issued;
-        if (step.key === 'fullAccess') return m.status === 'active';
-        return false;
     };
 
     const handleAddLog = () => {
@@ -121,7 +126,8 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                 body: JSON.stringify({
                     membership: formData.membership,
                     role: formData.role,
-                    boardPosition: formData.boardPosition
+                    boardPosition: formData.boardPosition,
+                    squareID: formData.squareID
                 })
             });
 
@@ -137,6 +143,44 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
             setLoading(false);
         }
     };
+
+    const handleSyncSubscription = async () => {
+        if (!formData.squareID) return;
+        setLoading(true);
+        try {
+            const response = await fetch('/api/v1/square/subscriptions/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    squareID: formData.squareID,
+                    userID: user.userID 
+                })
+            });
+            
+            if (!response.ok) throw new Error('Failed to sync subscription');
+            
+            const data = await response.json();
+            if (data.user) {
+                setFormData(prev => ({
+                    ...prev,
+                    ...data.user,
+                    membership: {
+                        ...prev.membership,
+                        ...data.user.membership
+                    }
+                }));
+                alert("Subscription synced successfully!");
+            } else {
+                alert("No active subscription found.");
+            }
+        } catch (error) {
+            console.error("Error syncing subscription:", error);
+            alert("Failed to sync subscription");
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     const activeStep = (() => {
         const m = formData.membership;
@@ -168,266 +212,331 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
     })();
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-            <DialogTitle>Manage Member: {user.firstName} {user.lastName}</DialogTitle>
-            <DialogContent>
-                <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 1 }}>
-                    <Chip label={formData.role} color={formData.role === 'admin' ? 'secondary' : 'default'} />
-                    <Chip label={formData.membership.status} color="primary" variant="outlined" />
-                    <Chip label={`Total Hours: ${totalHours}`} variant="outlined" />
-                    <Chip label={`This Month: ${currentMonthHours}`} color={currentMonthHours >= 4 ? "success" : "warning"} variant="outlined" />
+        <Dialog 
+            open={open} 
+            onClose={onClose} 
+            maxWidth="lg" 
+            fullWidth
+            fullScreen={isMobile}
+        >
+            {isMobile ? (
+                <AppBar sx={{ position: 'relative', borderBottom: '1px solid rgba(0, 0, 0, 0.12)', boxShadow: 'none' }} color="default">
+                    <Toolbar>
+                        <IconButton edge="start" color="inherit" onClick={onClose} aria-label="close">
+                            <CloseIcon />
+                        </IconButton>
+                        <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+                            {user.firstName} {user.lastName}
+                        </Typography>
+                        <Button autoFocus color="inherit" onClick={handleSave} disabled={loading}>
+                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Save'}
+                        </Button>
+                    </Toolbar>
+                </AppBar>
+            ) : (
+                <DialogTitle>Manage Member: {user.firstName} {user.lastName}</DialogTitle>
+            )}
+
+            <DialogContent sx={{ p: 0 }}>
+                <Box sx={{ p: { xs: 2, md: 3 }, pb: 0 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 3, mt: 1, flexWrap: 'wrap' }}>
+                        <Chip label={formData.role} color={formData.role === 'admin' ? 'secondary' : 'default'} size={isMobile ? "small" : "medium"} />
+                        <Chip label={formData.membership.status} color="primary" variant="outlined" size={isMobile ? "small" : "medium"} />
+                        <Chip label={`Total: ${totalHours}h`} variant="outlined" size={isMobile ? "small" : "medium"} />
+                        <Chip label={`Month: ${currentMonthHours}h`} color={currentMonthHours >= 4 ? "success" : "warning"} variant="outlined" size={isMobile ? "small" : "medium"} />
+                    </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
-                    <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" gutterBottom>Membership Progress</Typography>
-                        <Stepper activeStep={activeStep} orientation="vertical">
-                            <Step expanded>
-                                <StepLabel>Account Created</StepLabel>
-                                <StepContent>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Date: {new Date(formData.createdAt).toLocaleDateString()}
-                                    </Typography>
-                                </StepContent>
-                            </Step>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant={isMobile ? "fullWidth" : "standard"} sx={{ px: { xs: 0, md: 3 } }}>
+                        <Tab icon={<AssignmentIcon />} iconPosition="start" label={isMobile ? "Progress" : "Progress"} />
+                        <Tab icon={<HistoryIcon />} iconPosition="start" label={isMobile ? "Logs" : "Volunteer Logs"} />
+                        <Tab icon={<SettingsIcon />} iconPosition="start" label={isMobile ? "Admin" : "Admin Actions"} />
+                    </Tabs>
+                </Box>
 
-                            <Step expanded>
-                                <StepLabel>Application Submitted</StepLabel>
-                                <StepContent>
+                <TabPanel value={tabValue} index={0}>
+                    <Typography variant="h6" gutterBottom>Membership Progress</Typography>
+                    <Stepper activeStep={activeStep} orientation="vertical">
+                        <Step expanded>
+                            <StepLabel>Account Created</StepLabel>
+                            <StepContent>
+                                <Typography variant="body2" color="text.secondary">
+                                    Date: {new Date(formData.createdAt).toLocaleDateString()}
+                                </Typography>
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Application Submitted</StepLabel>
+                            <StepContent>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={!!formData.membership.applicationDate}
+                                            onChange={(e) => handleMembershipChange('applicationDate', e.target.checked ? new Date().toISOString() : null)}
+                                        />
+                                    }
+                                    label={formData.membership.applicationDate 
+                                        ? `Submitted on ${new Date(formData.membership.applicationDate).toLocaleDateString()}`
+                                        : "Mark Application as Submitted"}
+                                />
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Initial Contact / Reviewed</StepLabel>
+                            <StepContent>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
                                     <FormControlLabel
                                         control={
                                             <Checkbox
-                                                checked={!!formData.membership.applicationDate}
-                                                onChange={(e) => handleMembershipChange('applicationDate', e.target.checked ? new Date().toISOString() : null)}
+                                                checked={formData.membership.contacted}
+                                                onChange={(e) => handleMembershipChange('contacted', e.target.checked)}
                                             />
                                         }
-                                        label={formData.membership.applicationDate 
-                                            ? `Submitted on ${new Date(formData.membership.applicationDate).toLocaleDateString()}`
-                                            : "Mark Application as Submitted"}
+                                        label="Member has been contacted"
                                     />
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>Initial Contact / Reviewed</StepLabel>
-                                <StepContent>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.membership.contacted}
-                                                    onChange={(e) => handleMembershipChange('contacted', e.target.checked)}
-                                                />
-                                            }
-                                            label="Member has been contacted"
-                                        />
-                                        {formData.membership.reviewStatus === 'reviewed' && (
-                                            <Chip label="Reviewed" color="success" size="small" />
-                                        )}
-                                    </Box>
-                                    {!formData.membership.contacted && (
-                                        <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                            <Button 
-                                                variant="outlined" 
-                                                size="small" 
-                                                href={`mailto:${formData.email}`}
-                                                target="_blank"
-                                            >
-                                                Email
-                                            </Button>
-                                            {formData.phoneNumber && (
-                                                <Button 
-                                                    variant="outlined" 
-                                                    size="small" 
-                                                    href={`tel:${formData.phoneNumber}`}
-                                                >
-                                                    Call
-                                                </Button>
-                                            )}
-                                            {formData.discordHandle && (
-                                                <Button 
-                                                    variant="outlined" 
-                                                    size="small"
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(formData.discordHandle);
-                                                        alert(`Copied Discord Handle: ${formData.discordHandle}`);
-                                                    }}
-                                                >
-                                                    Copy Discord
-                                                </Button>
-                                            )}
-                                        </Box>
+                                    {formData.membership.reviewStatus === 'reviewed' && (
+                                        <Chip label="Reviewed" color="success" size="small" />
                                     )}
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>Onboarding</StepLabel>
-                                <StepContent>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={formData.membership.onboardingComplete}
-                                                onChange={(e) => handleMembershipChange('onboardingComplete', e.target.checked)}
-                                            />
-                                        }
-                                        label="Paperwork & Orientation Complete"
-                                    />
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>Membership Subscription</StepLabel>
-                                <StepContent>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                        <Typography variant="body2" color={
-                                            ['active', 'probation'].includes(formData.membership.status) || formData.membership.subscriptionStatus === 'ACTIVE' || formData.membership.isWaived || (formData.membership.sponsorshipExpiresAt && new Date(formData.membership.sponsorshipExpiresAt) > new Date())
-                                            ? "success.main" : "error.main"
-                                        }>
-                                            {['active', 'probation'].includes(formData.membership.status) || formData.membership.subscriptionStatus === 'ACTIVE'
-                                                ? "✅ Subscription Active" 
-                                                : formData.membership.isWaived 
-                                                    ? "✅ Dues Waived (Admin)"
-                                                    : (formData.membership.sponsorshipExpiresAt && new Date(formData.membership.sponsorshipExpiresAt) > new Date())
-                                                        ? `✅ Sponsored until ${new Date(formData.membership.sponsorshipExpiresAt).toLocaleDateString()}`
-                                                        : "❌ Pending Payment / Subscription"}
-                                        </Typography>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.membership.isWaived || false}
-                                                    onChange={(e) => handleMembershipChange('isWaived', e.target.checked)}
-                                                />
-                                            }
-                                            label="Waive Membership Dues (Permanent)"
-                                        />
-                                    </Box>
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>Complete Public Profile</StepLabel>
-                                <StepContent>
-                                    <Typography variant="body2" color={formData.profileCompleted || formData.isPublic ? "success.main" : "warning.main"}>
-                                        {formData.profileCompleted || formData.isPublic
-                                            ? `✅ Profile Setup Complete (${formData.isPublic ? "Public" : "Private"})` 
-                                            : "⚠️ Profile Setup Incomplete"}
-                                    </Typography>
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>First Month Volunteer Requirement</StepLabel>
-                                <StepContent>
-                                    <Typography variant="body2" gutterBottom>
-                                        {totalHours >= 4 ? "✅ Requirement Met" : `⚠️ ${4 - totalHours} hours remaining for probation`}
-                                    </Typography>
-                                </StepContent>
-                            </Step>
-
-                            <Step expanded>
-                                <StepLabel>Access Key Issued</StepLabel>
-                                <StepContent>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <FormControlLabel
-                                                control={
-                                                    <Checkbox
-                                                        checked={formData.membership.accessKey?.issued}
-                                                        onChange={(e) => handleAccessKeyChange('issued', e.target.checked)}
-                                                        disabled={!canAssignKey && !formData.membership.accessKey?.issued}
-                                                    />
-                                                }
-                                                label="Key Issued"
-                                            />
+                                </Box>
+                                {!formData.membership.contacted && (
+                                    <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                        <Button 
+                                            variant="outlined" 
+                                            size="small" 
+                                            href={`mailto:${formData.email}`}
+                                            target="_blank"
+                                        >
+                                            Email
+                                        </Button>
+                                        {formData.phoneNumber && (
                                             <Button 
                                                 variant="outlined" 
                                                 size="small" 
-                                                onClick={() => {
-                                                    const newKey = Math.floor(100000 + Math.random() * 900000).toString();
-                                                    handleAccessKeyChange('code', newKey);
-                                                    handleAccessKeyChange('issued', true);
-                                                }}
-                                                disabled={!canAssignKey}
+                                                href={`tel:${formData.phoneNumber}`}
                                             >
-                                                Generate Key
+                                                Call
                                             </Button>
-                                        </Box>
-                                        
-                                        {formData.membership.accessKey?.code && (
-                                            <TextField
-                                                label="Access Key Code"
-                                                value={formData.membership.accessKey.code}
+                                        )}
+                                        {formData.discordHandle && (
+                                            <Button 
+                                                variant="outlined" 
                                                 size="small"
-                                                fullWidth
-                                                InputProps={{
-                                                    readOnly: true,
-                                                    endAdornment: (
-                                                        <IconButton size="small" onClick={() => navigator.clipboard.writeText(formData.membership.accessKey.code)}>
-                                                            <AddIcon sx={{ transform: 'rotate(45deg)' }} /> {/* Using AddIcon as copy icon for now or just text */}
-                                                        </IconButton>
-                                                    )
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(formData.discordHandle);
+                                                    alert(`Copied Discord Handle: ${formData.discordHandle}`);
                                                 }}
-                                            />
-                                        )}
-
-                                        {!canAssignKey && !formData.membership.accessKey?.issued && (
-                                            <Typography variant="caption" color="error">
-                                                Cannot assign key: User must be active/probation, have 4+ volunteer hours, and not be suspended.
-                                            </Typography>
-                                        )}
-                                        {formData.membership.accessKey?.issued && (
-                                            <FormControl size="small" fullWidth>
-                                                <InputLabel>Key Type</InputLabel>
-                                                <Select
-                                                    value={formData.membership.accessKey?.type || 'limited'}
-                                                    label="Key Type"
-                                                    onChange={(e) => handleAccessKeyChange('type', e.target.value)}
-                                                >
-                                                    <MenuItem value="limited">Limited (8am - 10pm)</MenuItem>
-                                                    <MenuItem value="24h">24 Hour Access</MenuItem>
-                                                </Select>
-                                            </FormControl>
+                                            >
+                                                Copy Discord
+                                            </Button>
                                         )}
                                     </Box>
-                                </StepContent>
-                            </Step>
-                        </Stepper>
+                                )}
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Onboarding</StepLabel>
+                            <StepContent>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={formData.membership.onboardingComplete}
+                                            onChange={(e) => handleMembershipChange('onboardingComplete', e.target.checked)}
+                                        />
+                                    }
+                                    label="Paperwork & Orientation Complete"
+                                />
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Membership Subscription</StepLabel>
+                            <StepContent>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Typography variant="body2" color={
+                                        ['active', 'probation'].includes(formData.membership.status) || formData.membership.subscriptionStatus === 'ACTIVE' || formData.membership.isWaived || (formData.membership.sponsorshipExpiresAt && new Date(formData.membership.sponsorshipExpiresAt) > new Date())
+                                        ? "success.main" : "error.main"
+                                    }>
+                                        {['active', 'probation'].includes(formData.membership.status) || formData.membership.subscriptionStatus === 'ACTIVE'
+                                            ? "✅ Subscription Active" 
+                                            : formData.membership.isWaived 
+                                                ? "✅ Dues Waived (Admin)"
+                                                : (formData.membership.sponsorshipExpiresAt && new Date(formData.membership.sponsorshipExpiresAt) > new Date())
+                                                    ? `✅ Sponsored until ${new Date(formData.membership.sponsorshipExpiresAt).toLocaleDateString()}`
+                                                    : "❌ Pending Payment / Subscription"}
+                                    </Typography>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={formData.membership.isWaived || false}
+                                                onChange={(e) => handleMembershipChange('isWaived', e.target.checked)}
+                                            />
+                                        }
+                                        label="Waive Membership Dues (Permanent)"
+                                    />
+                                </Box>
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Complete Public Profile</StepLabel>
+                            <StepContent>
+                                <Typography variant="body2" color={formData.profileCompleted || formData.isPublic ? "success.main" : "warning.main"}>
+                                    {formData.profileCompleted || formData.isPublic
+                                        ? `✅ Profile Setup Complete (${formData.isPublic ? "Public" : "Private"})` 
+                                        : "⚠️ Profile Setup Incomplete"}
+                                </Typography>
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>First Month Volunteer Requirement</StepLabel>
+                            <StepContent>
+                                <Typography variant="body2" gutterBottom>
+                                    {totalHours >= 4 ? "✅ Requirement Met" : `⚠️ ${4 - totalHours} hours remaining for probation`}
+                                </Typography>
+                            </StepContent>
+                        </Step>
+
+                        <Step expanded>
+                            <StepLabel>Access Key Issued</StepLabel>
+                            <StepContent>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={formData.membership.accessKey?.issued}
+                                                    onChange={(e) => handleAccessKeyChange('issued', e.target.checked)}
+                                                    disabled={!canAssignKey && !formData.membership.accessKey?.issued}
+                                                />
+                                            }
+                                            label="Key Issued"
+                                        />
+                                        <Button 
+                                            variant="outlined" 
+                                            size="small" 
+                                            onClick={() => {
+                                                const newKey = Math.floor(100000 + Math.random() * 900000).toString();
+                                                handleAccessKeyChange('code', newKey);
+                                                handleAccessKeyChange('issued', true);
+                                            }}
+                                            disabled={!canAssignKey}
+                                        >
+                                            Generate Key
+                                        </Button>
+                                    </Box>
+                                    
+                                    {formData.membership.accessKey?.code && (
+                                        <TextField
+                                            label="Access Key Code"
+                                            value={formData.membership.accessKey.code}
+                                            size="small"
+                                            fullWidth
+                                            InputProps={{
+                                                readOnly: true,
+                                                endAdornment: (
+                                                    <IconButton size="small" onClick={() => navigator.clipboard.writeText(formData.membership.accessKey.code)}>
+                                                        <AddIcon sx={{ transform: 'rotate(45deg)' }} />
+                                                    </IconButton>
+                                                )
+                                            }}
+                                        />
+                                    )}
+
+                                    {!canAssignKey && !formData.membership.accessKey?.issued && (
+                                        <Typography variant="caption" color="error">
+                                            Cannot assign key: User must be active/probation, have 4+ volunteer hours, and not be suspended.
+                                        </Typography>
+                                    )}
+                                    {formData.membership.accessKey?.issued && (
+                                        <FormControl size="small" fullWidth>
+                                            <InputLabel>Key Type</InputLabel>
+                                            <Select
+                                                value={formData.membership.accessKey?.type || 'limited'}
+                                                label="Key Type"
+                                                onChange={(e) => handleAccessKeyChange('type', e.target.value)}
+                                            >
+                                                <MenuItem value="limited">Limited (8am - 10pm)</MenuItem>
+                                                <MenuItem value="24h">24 Hour Access</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                </Box>
+                            </StepContent>
+                        </Step>
+                    </Stepper>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={1}>
+                    <Typography variant="h6" gutterBottom>Volunteer Logs</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1, mb: 3, alignItems: { xs: 'stretch', sm: 'flex-end' } }}>
+                        <TextField
+                            label="Date"
+                            type="date"
+                            size="small"
+                            value={newLog.date}
+                            onChange={(e) => setNewLog({ ...newLog, date: e.target.value })}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth={isMobile}
+                        />
+                        <TextField
+                            label="Hours"
+                            type="number"
+                            size="small"
+                            sx={{ width: { xs: '100%', sm: 80 } }}
+                            value={newLog.hours}
+                            onChange={(e) => setNewLog({ ...newLog, hours: e.target.value })}
+                        />
+                        <TextField
+                            label="Description"
+                            size="small"
+                            fullWidth
+                            value={newLog.description}
+                            onChange={(e) => setNewLog({ ...newLog, description: e.target.value })}
+                        />
+                        <Button 
+                            variant="contained" 
+                            onClick={handleAddLog}
+                            startIcon={<AddIcon />}
+                            fullWidth={isMobile}
+                        >
+                            Add
+                        </Button>
                     </Box>
 
-                    <Divider orientation="vertical" flexItem />
-
-                    <Box sx={{ flex: 1.5 }}>
-                        <Typography variant="h6" gutterBottom>Volunteer Logs</Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-end' }}>
-                            <TextField
-                                label="Date"
-                                type="date"
-                                size="small"
-                                value={newLog.date}
-                                onChange={(e) => setNewLog({ ...newLog, date: e.target.value })}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                            <TextField
-                                label="Hours"
-                                type="number"
-                                size="small"
-                                sx={{ width: 80 }}
-                                value={newLog.hours}
-                                onChange={(e) => setNewLog({ ...newLog, hours: e.target.value })}
-                            />
-                            <TextField
-                                label="Description"
-                                size="small"
-                                fullWidth
-                                value={newLog.description}
-                                onChange={(e) => setNewLog({ ...newLog, description: e.target.value })}
-                            />
-                            <IconButton color="primary" onClick={handleAddLog}>
-                                <AddIcon />
-                            </IconButton>
-                        </Box>
-
+                    {isMobile ? (
+                        <Stack spacing={2}>
+                            {(formData.membership.volunteerLog || []).map((log) => (
+                                <Card key={log.id} variant="outlined">
+                                    <CardContent sx={{ pb: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight="bold">
+                                                    {new Date(log.date).toLocaleDateString()}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {log.hours} Hours
+                                                </Typography>
+                                            </Box>
+                                            <IconButton size="small" color="error" onClick={() => handleDeleteLog(log.id)}>
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </Box>
+                                        <Typography variant="body2" sx={{ mt: 1 }}>
+                                            {log.description}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            {(!formData.membership.volunteerLog || formData.membership.volunteerLog.length === 0) && (
+                                <Typography variant="body2" color="text.secondary" align="center">No logs found</Typography>
+                            )}
+                        </Stack>
+                    ) : (
                         <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
                             <Table size="small" stickyHeader>
                                 <TableHead>
@@ -459,65 +568,86 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                                 </TableBody>
                             </Table>
                         </TableContainer>
+                    )}
+                </TabPanel>
 
-                        <Divider sx={{ my: 3 }} />
+                <TabPanel value={tabValue} index={2}>
+                    <Typography variant="h6" gutterBottom>Admin Actions</Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                            <FormControl fullWidth>
+                                <InputLabel>Role</InputLabel>
+                                <Select
+                                    value={formData.role}
+                                    label="Role"
+                                    onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                                >
+                                    <MenuItem value="user">User</MenuItem>
+                                    <MenuItem value="admin">Admin</MenuItem>
+                                </Select>
+                            </FormControl>
 
-                        <Typography variant="h6" gutterBottom>Admin Actions</Typography>
-                        <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Role</InputLabel>
-                                    <Select
-                                        value={formData.role}
-                                        label="Role"
-                                        onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                                    >
-                                        <MenuItem value="user">User</MenuItem>
-                                        <MenuItem value="admin">Admin</MenuItem>
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth>
-                                    <InputLabel>Membership Status</InputLabel>
-                                    <Select
-                                        value={formData.membership.status}
-                                        label="Membership Status"
-                                        onChange={(e) => handleMembershipChange('status', e.target.value)}
-                                    >
-                                        <MenuItem value="registered">Registered</MenuItem>
-                                        <MenuItem value="applicant">Applicant</MenuItem>
-                                        <MenuItem value="onboarding">Onboarding</MenuItem>
-                                        <MenuItem value="probation">Probation</MenuItem>
-                                        <MenuItem value="active">Active Member</MenuItem>
-                                        <MenuItem value="suspended">Suspended</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Box>
-
-                            {formData.role === 'admin' && (
-                                <TextField
-                                    fullWidth
-                                    label="Board Position / Title"
-                                    value={formData.boardPosition || ''}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, boardPosition: e.target.value }))}
-                                    helperText="e.g. President, Treasurer, Shop Manager"
-                                />
-                            )}
+                            <FormControl fullWidth>
+                                <InputLabel>Membership Status</InputLabel>
+                                <Select
+                                    value={formData.membership.status}
+                                    label="Membership Status"
+                                    onChange={(e) => handleMembershipChange('status', e.target.value)}
+                                >
+                                    <MenuItem value="registered">Registered</MenuItem>
+                                    <MenuItem value="applicant">Applicant</MenuItem>
+                                    <MenuItem value="onboarding">Onboarding</MenuItem>
+                                    <MenuItem value="probation">Probation</MenuItem>
+                                    <MenuItem value="active">Active Member</MenuItem>
+                                    <MenuItem value="suspended">Suspended</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Box>
+
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                            <TextField
+                                fullWidth
+                                label="Square Customer ID"
+                                value={formData.squareID || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, squareID: e.target.value }))}
+                                helperText="Enter Square Customer ID to sync subscription"
+                            />
+                            <Button 
+                                variant="outlined" 
+                                onClick={handleSyncSubscription}
+                                disabled={loading || !formData.squareID}
+                                sx={{ mt: 1, height: 40, whiteSpace: 'nowrap' }}
+                            >
+                                Sync
+                            </Button>
+                        </Box>
+
+                        {formData.role === 'admin' && (
+                            <TextField
+                                fullWidth
+                                label="Board Position / Title"
+                                value={formData.boardPosition || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, boardPosition: e.target.value }))}
+                                helperText="e.g. President, Treasurer, Shop Manager"
+                            />
+                        )}
                     </Box>
-                </Box>
+                </TabPanel>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button 
-                    onClick={handleSave} 
-                    variant="contained" 
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : null}
-                >
-                    Save Changes
-                </Button>
-            </DialogActions>
+            
+            {!isMobile && (
+                <DialogActions>
+                    <Button onClick={onClose}>Cancel</Button>
+                    <Button 
+                        onClick={handleSave} 
+                        variant="contained" 
+                        disabled={loading}
+                        startIcon={loading ? <CircularProgress size={20} /> : null}
+                    >
+                        Save Changes
+                    </Button>
+                </DialogActions>
+            )}
         </Dialog>
     );
 }

@@ -71,4 +71,60 @@ export default class SubscriptionService {
       throw error;
     }
   }
+
+  static syncSubscription = async (squareID, userID = null) => {
+    try {
+      const squareClient = new Client({
+        environment:
+          process.env.SQUARE_ENVIRONMENT === "production"
+            ? Environment.Production
+            : Environment.Sandbox,
+        accessToken: process.env.SQUARE_ACCESS_TOKEN,
+      });
+
+      // Search for subscriptions for this customer
+      const response = await squareClient.subscriptionsApi.searchSubscriptions({
+        query: {
+          filter: {
+            customerIds: [squareID],
+          },
+        },
+      });
+
+      const subscriptions = response.result.subscriptions;
+      if (!subscriptions || subscriptions.length === 0) {
+        return null;
+      }
+
+      // Find the most relevant subscription (ACTIVE takes precedence)
+      const activeSubscription =
+        subscriptions.find((s) => s.status === "ACTIVE") || subscriptions[0];
+
+      let targetUserID = userID;
+      if (!targetUserID) {
+          // Find the user by squareID if userID not provided
+          const user = await UserService.getUserByQuery({ squareID });
+          if (!user) {
+            throw new Error("User not found for squareID: " + squareID);
+          }
+          targetUserID = user.userID;
+      }
+
+      // Update the user
+      const updateData = {
+        squareID: squareID, // Ensure squareID is set
+        "membership.squareSubscriptionId": activeSubscription.id,
+        "membership.subscriptionStatus": activeSubscription.status,
+        "membership.lastPaymentDate": new Date().toISOString(), // Approximate
+      };
+      
+      // Use userID for update query
+      const updatedUser = await UserService.updateUser(targetUserID, updateData);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error("Error syncing subscription:", error);
+      throw error;
+    }
+  };
 }

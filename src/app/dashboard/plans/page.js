@@ -16,7 +16,7 @@ const PlansPage = () => {
     const fetchPlans = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/memberships"); // Replace with your membership plans API endpoint
+        const response = await fetch("/api/v1/plans"); 
         const data = await response.json();
         setPlans(data);
       } catch (error) {
@@ -31,10 +31,6 @@ const PlansPage = () => {
 
     fetchPlans();
   }, []);
-
-  const handleSelectPlan = (plan) => {
-    router.push(`/dashboard/profile?plan=${plan.id}`);
-  };
 
   return (
     <Box sx={{ padding: "4rem 1rem" }}>
@@ -65,15 +61,16 @@ const PlansPage = () => {
                   <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: "1rem" }}>
                     ${plan.price}/month
                   </Typography>
-                  <Button variant="contained" color="primary" fullWidth onClick={() => handleSelectPlan(plan)}>
-                    Select Plan
-                  </Button>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                    <div dangerouslySetInnerHTML={{ __html: plan.embed }} />
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
       )}
+
 
       <Snackbar
         open={snackbarOpen}

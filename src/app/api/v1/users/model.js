@@ -87,8 +87,16 @@ export default class UserModel {
             const { _id, ...updateFields } = updateData;
 
             const dbUsers = await db.dbUsers();
-            const result = await dbUsers.updateOne(
-                {
+
+            let filter;
+            if (typeof query === 'object') {
+                // Handle object query (e.g. { userID: '...' })
+                filter = {
+                    $or: Object.keys(query).map(key => ({ [key]: { $regex: query[key], $options: "i" } }))
+                };
+            } else {
+                // Handle string query (search across multiple fields)
+                filter = {
                     $or: [
                         { firstName: { $regex: query, $options: "i" } },
                         { lastName: { $regex: query, $options: "i" } },
@@ -96,23 +104,16 @@ export default class UserModel {
                         { phoneNumber: { $regex: query, $options: "i" } },
                         { userID: { $regex: query, $options: "i" } }
                     ]
-                },
-                { $set: updateFields }
-            );
+                };
+            }
+
+            const result = await dbUsers.updateOne(filter, { $set: updateFields });
 
             if (result.matchedCount === 0) {
                 throw new Error("No user found to update.");
             }
 
-            const updatedUser = await dbUsers.findOne({
-                $or: [
-                    { firstName: { $regex: query, $options: "i" } },
-                    { lastName: { $regex: query, $options: "i" } },
-                    { email: { $regex: query, $options: "i" } },
-                    { phoneNumber: { $regex: query, $options: "i" } },
-                    { userID: { $regex: query, $options: "i" } }
-                ]
-            });
+            const updatedUser = await dbUsers.findOne(filter);
             return updatedUser;
         } catch (error) {
             console.error("Error updating user:", error);

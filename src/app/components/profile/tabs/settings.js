@@ -95,7 +95,7 @@ const SettingsTab = ({ user }) => {
     };
 
     return (
-        <Box sx={{ padding: 3, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
+        <Box sx={{ padding: { xs: 2, md: 3 }, backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary }}>
             <Typography variant="h6" gutterBottom sx={{ color: theme.palette.primary.main, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SecurityIcon /> Security Settings
             </Typography>
@@ -107,7 +107,7 @@ const SettingsTab = ({ user }) => {
                             Change your password to keep your account secure.
                         </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+                    <Grid item xs={12} sm={4} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
                         <Button variant="outlined" color="primary" onClick={() => setOpenPasswordDialog(true)}>
                             Change Password
                         </Button>
@@ -162,7 +162,7 @@ const SettingsTab = ({ user }) => {
                             </Alert>
                         )}
                     </Grid>
-                    <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+                    <Grid item xs={12} sm={4} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
                         {user.discordHandle ? (
                             <Button variant="outlined" color="error" disabled>
                                 Disconnect
@@ -187,7 +187,7 @@ const SettingsTab = ({ user }) => {
                             </Alert>
                         )}
                     </Grid>
-                    <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+                    <Grid item xs={12} sm={4} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
                         {user.googleId ? (
                             <Button variant="outlined" color="error" disabled>
                                 Disconnect

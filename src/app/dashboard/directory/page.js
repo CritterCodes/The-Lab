@@ -149,7 +149,7 @@ export default function MembersDirectory() {
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 4, md: 8 } }}>
                 <CircularProgress />
             </Box>
         );
@@ -157,8 +157,8 @@ export default function MembersDirectory() {
 
     if (!hasAccess) {
         return (
-            <Container maxWidth="md" sx={{ mt: 8, textAlign: 'center' }}>
-                <Box sx={{ p: 4, border: '1px solid #333', borderRadius: 2, bgcolor: 'background.paper' }}>
+            <Container maxWidth="md" sx={{ mt: { xs: 4, md: 8 }, textAlign: 'center' }}>
+                <Box sx={{ p: { xs: 2, md: 4 }, border: '1px solid #333', borderRadius: 2, bgcolor: 'background.paper' }}>
                     <LockIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h4" gutterBottom>
                         Membership Required
@@ -182,18 +182,18 @@ export default function MembersDirectory() {
     }
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Box sx={{ mb: 6, textAlign: 'center' }}>
-                <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="primary">
+        <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+            <Box sx={{ mb: { xs: 3, md: 6 }, textAlign: 'center' }}>
+                <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="primary" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                     Member Directory
                 </Typography>
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     Connect with other makers, creators, and innovators in our community.
                 </Typography>
             </Box>
 
             {/* Filters & Search */}
-            <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }} elevation={2}>
+            <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4, borderRadius: 2 }} elevation={2}>
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={4}>
                         <TextField
@@ -262,7 +262,7 @@ export default function MembersDirectory() {
             </Paper>
 
             {/* Results Grid */}
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, md: 3 }}>
                 {filteredUsers.length > 0 ? (
                     filteredUsers.map((user) => (
                         <Grid item xs={12} sm={6} md={4} lg={3} key={user.userID}>
@@ -386,7 +386,7 @@ export default function MembersDirectory() {
                     ))
                 ) : (
                     <Grid item xs={12}>
-                        <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Box sx={{ textAlign: 'center', py: { xs: 4, md: 8 } }}>
                             <Typography variant="h6" color="text.secondary">
                                 No members found matching your criteria.
                             </Typography>

@@ -90,6 +90,11 @@ const theme = createTheme({
                 root: {
                     backgroundColor: "#000000", // Black background
                     color: "#00ff00", // Green text
+                    boxShadow: "none",
+                    borderBottom: "1px solid #333", // Subtle border instead of shadow
+                    padding: 0, // Reset padding inherited from Paper
+                    borderRadius: 0, // Reset border radius inherited from Paper
+                    backgroundImage: "none",
                 },
             },
         },
@@ -98,6 +103,10 @@ const theme = createTheme({
                 paper: {
                     backgroundColor: "#000000", // Black background
                     color: "#00ff00", // Green text
+                    padding: 0, // Reset padding
+                    borderRadius: 0, // Reset border radius
+                    boxShadow: "none",
+                    borderRight: "1px solid #333",
                 },
             },
         },

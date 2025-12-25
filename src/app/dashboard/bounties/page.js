@@ -4,7 +4,7 @@ import {
     Box, Typography, Button, Grid, Card, CardContent, CardActions, 
     Chip, Dialog, DialogTitle, DialogContent, DialogActions, 
     TextField, MenuItem, Select, InputLabel, FormControl, 
-    Tabs, Tab, Alert, LinearProgress, IconButton, Tooltip
+    Tabs, Tab, Alert, LinearProgress, IconButton, Tooltip, Fab, Zoom, useTheme
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
@@ -21,6 +21,7 @@ import Link from 'next/link';
 
 export default function BountiesPage() {
     const { data: session } = useSession();
+    const theme = useTheme();
     const [bounties, setBounties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userMembership, setUserMembership] = useState(null);
@@ -223,19 +224,27 @@ export default function BountiesPage() {
     });
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 2, md: 3 }, pb: { xs: 10, md: 3 } }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4">Bounty Board</Typography>
+                <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>Bounty Board</Typography>
                 <Button 
                     variant="contained" 
                     startIcon={<AddIcon />} 
                     onClick={handleOpenCreate}
+                    sx={{ display: { xs: 'none', md: 'flex' } }}
                 >
                     Create Bounty
                 </Button>
             </Box>
 
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
+            <Tabs 
+                value={tabValue} 
+                onChange={(e, v) => setTabValue(v)} 
+                sx={{ mb: 3 }}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+            >
                 <Tab label="All Open" />
                 <Tab label="Volunteer Opportunities" />
                 <Tab label="Community Requests" />
@@ -401,6 +410,23 @@ export default function BountiesPage() {
                     })}
                 </Grid>
             )}
+
+            {/* Mobile Create FAB */}
+            <Zoom in={!loading}>
+                <Fab 
+                    color="primary" 
+                    aria-label="add" 
+                    onClick={handleOpenCreate}
+                    sx={{ 
+                        position: 'fixed', 
+                        bottom: 24, 
+                        right: 24, 
+                        display: { xs: 'flex', md: 'none' } 
+                    }}
+                >
+                    <AddIcon />
+                </Fab>
+            </Zoom>
 
             <Dialog open={openCreate} onClose={() => setOpenCreate(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>{editMode ? 'Edit Bounty' : 'Create New Bounty'}</DialogTitle>

@@ -6,7 +6,7 @@ const UserImage = ({ picture }) => {
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <Avatar
                 src={picture || '/default-avatar.png'}
-                sx={{ width: 350, height: 350 }}
+                sx={{ width: { xs: 200, sm: 250, md: 350 }, height: { xs: 200, sm: 250, md: 350 } }}
             />
         </Box>
     );

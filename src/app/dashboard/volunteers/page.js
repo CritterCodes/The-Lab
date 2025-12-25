@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Chip, IconButton, Tooltip, LinearProgress, Button } from '@mui/material';
+import { 
+    Box, Typography, Paper, Chip, IconButton, Tooltip, LinearProgress, Button,
+    Container, Card, CardContent, Stack, Avatar, useTheme, useMediaQuery,
+    TextField, InputAdornment, Grid
+} from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import EmailIcon from '@mui/icons-material/Email';
@@ -8,6 +12,9 @@ import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import MemberDialog from '../../components/admin/MemberDialog';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -15,10 +22,14 @@ import { useRouter } from 'next/navigation';
 export default function VolunteersPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -107,6 +118,12 @@ export default function VolunteersPage() {
         (user.membership?.volunteerLog || [])
             .filter(log => log.status === 'pending')
             .map(log => ({ ...log, user }))
+    );
+
+    const filteredUsers = users.filter(user => 
+        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const columns = [
@@ -215,78 +232,184 @@ export default function VolunteersPage() {
     ];
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>Volunteer Compliance</Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Track monthly volunteer hours and manage member status. Requirement: 4 hours/month.
-            </Typography>
+        <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
+                    Volunteer Compliance
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    Track monthly volunteer hours and manage member status. Requirement: 4 hours/month.
+                </Typography>
+            </Box>
 
             {pendingLogs.length > 0 && (
-                <Paper sx={{ mb: 4, p: 2, border: '1px solid #ed6c02' }}>
+                <Paper sx={{ mb: 4, p: 2, border: '1px solid #ed6c02', bgcolor: '#fff4e5' }}>
                     <Typography variant="h6" color="warning.main" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <WarningIcon /> Pending Approvals ({pendingLogs.length})
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Stack spacing={1}>
                         {pendingLogs.map((item) => (
-                            <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
-                                <Box>
-                                    <Typography variant="subtitle2">{item.user.firstName} {item.user.lastName}</Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {item.hours} hrs on {new Date(item.date).toLocaleDateString()} - "{item.description}"
-                                    </Typography>
+                            <Paper key={item.id} elevation={0} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight="bold">{item.user.firstName} {item.user.lastName}</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {item.hours} hrs on {new Date(item.date).toLocaleDateString()} - "{item.description}"
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+                                        <Button 
+                                            size="small" 
+                                            variant="contained" 
+                                            color="success" 
+                                            startIcon={<CheckIcon />}
+                                            onClick={() => handleLogAction(item.user, item.id, 'approve')}
+                                            fullWidth={isMobile}
+                                        >
+                                            Approve
+                                        </Button>
+                                        <Button 
+                                            size="small" 
+                                            variant="outlined" 
+                                            color="error" 
+                                            startIcon={<CloseIcon />}
+                                            onClick={() => handleLogAction(item.user, item.id, 'reject')}
+                                            fullWidth={isMobile}
+                                        >
+                                            Reject
+                                        </Button>
+                                    </Box>
                                 </Box>
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button 
-                                        size="small" 
-                                        variant="contained" 
-                                        color="success" 
-                                        startIcon={<CheckIcon />}
-                                        onClick={() => handleLogAction(item.user, item.id, 'approve')}
-                                    >
-                                        Approve
-                                    </Button>
-                                    <Button 
-                                        size="small" 
-                                        variant="outlined" 
-                                        color="error" 
-                                        startIcon={<CloseIcon />}
-                                        onClick={() => handleLogAction(item.user, item.id, 'reject')}
-                                    >
-                                        Reject
-                                    </Button>
-                                </Box>
-                            </Box>
+                            </Paper>
                         ))}
-                    </Box>
+                    </Stack>
                 </Paper>
             )}
 
-            <Paper sx={{ height: 600, width: '100%' }}>
-                <DataGrid
-                    rows={users}
-                    columns={columns}
-                    getRowId={(row) => row.userID}
-                    loading={loading}
-                    slots={{ toolbar: GridToolbar }}
-                    slotProps={{
-                        toolbar: {
-                            showQuickFilter: true,
-                        },
-                    }}
-                    initialState={{
-                        sorting: {
-                            sortModel: [{ field: 'hoursNeeded', sort: 'desc' }],
-                        },
-                        filter: {
-                            filterModel: {
-                                items: [
-                                    { field: 'membershipStatus', operator: 'isAnyOf', value: ['active', 'probation'] }
-                                ]
+            {isMobile ? (
+                <Box>
+                    <TextField
+                        fullWidth
+                        placeholder="Search volunteers..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{ mb: 3, bgcolor: 'background.paper' }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon color="action" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                    <Stack spacing={2}>
+                        {filteredUsers.map((user) => {
+                            const monthlyHours = getMonthlyHours(user);
+                            const hoursNeeded = Math.max(0, 4 - monthlyHours);
+                            const progress = Math.min((monthlyHours / 4) * 100, 100);
+                            const isComplete = monthlyHours >= 4;
+                            const status = user.membership?.status || 'N/A';
+                            
+                            // Get last active date
+                            const logs = user.membership?.volunteerLog || [];
+                            const sortedLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
+                            const lastActive = sortedLogs.length > 0 ? new Date(sortedLogs[0].date).toLocaleDateString() : 'Never';
+
+                            return (
+                                <Card key={user.userID} elevation={2}>
+                                    <CardContent>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                                                    {user.firstName?.[0]}{user.lastName?.[0]}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="subtitle1" fontWeight="bold">
+                                                        {user.firstName} {user.lastName}
+                                                    </Typography>
+                                                    <Chip 
+                                                        label={status} 
+                                                        size="small" 
+                                                        color={status === 'active' ? 'success' : status === 'probation' ? 'warning' : 'error'}
+                                                        variant="outlined"
+                                                        sx={{ height: 20, fontSize: '0.7rem' }}
+                                                    />
+                                                </Box>
+                                            </Box>
+                                            <Box>
+                                                <IconButton size="small" href={`mailto:${user.email}`}>
+                                                    <EmailIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton size="small" onClick={() => handleEditClick(user)}>
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        </Box>
+
+                                        <Box sx={{ mb: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary">Monthly Progress</Typography>
+                                                <Typography variant="caption" fontWeight="bold">
+                                                    {monthlyHours}/4 hrs
+                                                </Typography>
+                                            </Box>
+                                            <LinearProgress 
+                                                variant="determinate" 
+                                                value={progress} 
+                                                color={isComplete ? "success" : "warning"}
+                                                sx={{ height: 8, borderRadius: 4 }}
+                                            />
+                                            {hoursNeeded > 0 ? (
+                                                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                                    {hoursNeeded} hours still needed
+                                                </Typography>
+                                            ) : (
+                                                <Typography variant="caption" color="success.main" sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <CheckCircleIcon fontSize="inherit" /> Monthly goal met
+                                                </Typography>
+                                            )}
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                                            <CalendarTodayIcon fontSize="small" />
+                                            <Typography variant="body2">
+                                                Last Active: {lastActive}
+                                            </Typography>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </Stack>
+                </Box>
+            ) : (
+                <Paper sx={{ height: 600, width: '100%' }}>
+                    <DataGrid
+                        rows={users}
+                        columns={columns}
+                        getRowId={(row) => row.userID}
+                        loading={loading}
+                        slots={{ toolbar: GridToolbar }}
+                        slotProps={{
+                            toolbar: {
+                                showQuickFilter: true,
+                            },
+                        }}
+                        initialState={{
+                            sorting: {
+                                sortModel: [{ field: 'hoursNeeded', sort: 'desc' }],
+                            },
+                            filter: {
+                                filterModel: {
+                                    items: [
+                                        { field: 'membershipStatus', operator: 'isAnyOf', value: ['active', 'probation'] }
+                                    ]
+                                }
                             }
-                        }
-                    }}
-                />
-            </Paper>
+                        }}
+                    />
+                </Paper>
+            )}
 
             <MemberDialog 
                 open={dialogOpen} 
@@ -294,6 +417,6 @@ export default function VolunteersPage() {
                 user={selectedUser}
                 onUpdate={handleUserUpdate}
             />
-        </Box>
+        </Container>
     );
 }

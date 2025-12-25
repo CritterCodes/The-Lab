@@ -2,7 +2,8 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Box, Typography, Button, Breadcrumbs, Link, Snackbar, useTheme } from '@mui/material';
+import { Box, Typography, Button, Breadcrumbs, Link, Snackbar, useTheme, Fab, Zoom } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
 import UserHeader from '@/app/components/profile/header';
 import UserDetailsForm from '@/app/components/profile/details';
 import UserImage from '@/app/components/profile/image';
@@ -137,7 +138,7 @@ const ViewUserPage = ({ params }) => {
     }
 
     return (
-        <Box sx={{ padding: { xs: '10px', sm: '20px' }, backgroundColor: theme.palette.background.default, color: theme.palette.text.primary }}>
+        <Box sx={{ padding: { xs: 2, md: 4 }, backgroundColor: theme.palette.background.default, color: theme.palette.text.primary }}>
             {/* Breadcrumbs */}
             <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2, color: theme.palette.text.primary }}>
                 <Link underline="hover" color="inherit" onClick={() => router.push('/dashboard')} sx={{ cursor: 'pointer', color: theme.palette.text.primary }}>
@@ -158,7 +159,7 @@ const ViewUserPage = ({ params }) => {
             {/* Tab Content Handling */}
             {/* User Details Tab */}
             {activeTab === 0 && (
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, mt: 3 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'center', md: 'flex-start' }, gap: 4, mt: 3 }}>
                     <UserImage picture={session?.user?.image} />
                     <UserDetailsForm user={updatedUser} onEdit={handleEditChange} />
                 </Box>
@@ -181,6 +182,23 @@ const ViewUserPage = ({ params }) => {
                   <SettingsTab user={updatedUser} />
                 </Box>
             )}
+            {/* Mobile Save FAB */}
+            <Zoom in={hasChanges}>
+                <Fab 
+                    color="primary" 
+                    aria-label="save" 
+                    onClick={handleSaveChanges}
+                    sx={{ 
+                        position: 'fixed', 
+                        bottom: 24, 
+                        right: 24, 
+                        display: { xs: 'flex', md: 'none' } 
+                    }}
+                >
+                    <SaveIcon />
+                </Fab>
+            </Zoom>
+
             {/* Snackbar */}
             <Snackbar
                 open={snackbarOpen}
