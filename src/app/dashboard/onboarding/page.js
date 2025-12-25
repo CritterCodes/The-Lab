@@ -135,8 +135,8 @@ export default function OnboardingPage() {
                                                         <TextField 
                                                             {...params} 
                                                             variant="outlined" 
-                                                            label={field.charAt(0).toUpperCase() + field.slice(1)}
-                                                            placeholder={`Add ${field}...`} 
+                                                            label={field === 'hobbies' ? "Hobbies & Interests" : (field.charAt(0).toUpperCase() + field.slice(1))}
+                                                            placeholder={field === 'hobbies' ? "Add hobbies & interests..." : `Add ${field}...`} 
                                                         />
                                                     )}
                                                 />
