@@ -16,10 +16,17 @@ import {
   Radio,
   Checkbox,
   FormGroup,
+  Autocomplete,
+  Chip
 } from "@mui/material";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import LoadingTerminal from "@/app/components/LoadingTerminal";
+
+const commonHobbies = [
+    "Gaming", "Reading", "Hiking", "Cooking", "Traveling", "Photography", 
+    "Music", "Art", "Gardening", "DIY", "Robotics", "Cosplay", "Board Games"
+];
 
 const OnboardingPage = () => {
   const { data: session, status } = useSession();
@@ -34,7 +41,7 @@ const OnboardingPage = () => {
     discordHandle: "",
     bio: "",
     creatorType: [],
-    hobbies: "",
+    hobbies: [],
     cityChange: "",
     knownMembers: "",
     questions: "",
@@ -59,7 +66,7 @@ const OnboardingPage = () => {
               discordHandle: userData.discordHandle || (userData.provider === 'discord' ? userData.username : ""),
               bio: userData.bio || "",
               creatorType: Array.isArray(userData.creatorType) ? userData.creatorType : (userData.creatorType ? [userData.creatorType] : []),
-              hobbies: userData.hobbies || "",
+              hobbies: Array.isArray(userData.hobbies) ? userData.hobbies : (userData.hobbies ? [userData.hobbies] : []),
               cityChange: userData.cityChange || "",
               knownMembers: userData.knownMembers || "",
               questions: userData.questions || "",
@@ -235,15 +242,26 @@ const OnboardingPage = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="What are your hobbies and interests?"
-                name="hobbies"
-                multiline
-                rows={2}
-                value={form.hobbies}
-                onChange={handleChange}
-                required
+              <Autocomplete
+                multiple
+                freeSolo
+                options={commonHobbies}
+                value={form.hobbies || []}
+                onChange={(event, newValue) => setForm({ ...form, hobbies: newValue })}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                  ))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    label="What are your hobbies and interests?"
+                    placeholder="Add hobbies..."
+                    helperText="Press Enter to add custom hobbies"
+                  />
+                )}
               />
             </Grid>
 
