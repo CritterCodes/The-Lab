@@ -14,6 +14,8 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import CollectionsIcon from '@mui/icons-material/Collections';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 const getUserNavigation = (userID) => [
     {
@@ -27,6 +29,16 @@ const getUserNavigation = (userID) => [
         icon: <BuildIcon />,
     },
     {
+        segment: 'dashboard/showcase',
+        title: 'Maker Showcase',
+        icon: <CollectionsIcon />,
+    },
+    {
+        segment: 'dashboard/leaderboard',
+        title: 'Leaderboard',
+        icon: <EmojiEventsIcon />,
+    },
+    {
         segment: `dashboard/${userID}/volunteer`,
         title: 'Volunteer Log',
         icon: <VolunteerActivismIcon />,
@@ -35,6 +47,16 @@ const getUserNavigation = (userID) => [
         segment: 'dashboard/bounties',
         title: 'Bounties',
         icon: <AssignmentIcon />,
+    },
+    {
+        segment: 'dashboard/bugs',
+        title: 'Bug Tracker',
+        icon: <BuildIcon />,
+    },
+    {
+        segment: 'dashboard/badges',
+        title: 'Badge Directory',
+        icon: <EmojiEventsIcon />,
     },
     {
         segment: 'dashboard/directory',

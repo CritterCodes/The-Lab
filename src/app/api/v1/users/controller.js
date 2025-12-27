@@ -93,10 +93,12 @@ export default class UserController {
         try {
             const { searchParams } = new URL(req.url);
             const isPublic = searchParams.get('isPublic') === 'true';
+            const page = parseInt(searchParams.get('page') || '1');
+            const limit = parseInt(searchParams.get('limit') || '12');
             
-            const users = await UserService.getAllUsers(isPublic);
+            const result = await UserService.getAllUsers(isPublic, page, limit);
             return new Response(
-                JSON.stringify({ users }),
+                JSON.stringify(result),
                 { status: 200 }
             );
         } catch (error) {

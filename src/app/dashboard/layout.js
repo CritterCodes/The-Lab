@@ -4,6 +4,7 @@ import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { PageContainer } from '@toolpad/core/PageContainer';
 import { useTheme, Box, CircularProgress } from '@mui/material';
 import NotificationBell from './components/NotificationBell';
+import MobileBottomNav from './components/MobileBottomNav';
 
 export default function Layout({ children }) {
   const theme = useTheme();
@@ -29,12 +30,14 @@ export default function Layout({ children }) {
           color: theme.palette.text.primary,
           minHeight: "100vh",
           height: "100%",
-          padding: "2rem",
+          padding: { xs: "1rem", md: "2rem" },
+          paddingBottom: { xs: "80px", md: "2rem" },
           display: "flex",
           flexDirection: "column",
         }}
       >
         <PageContainer sx={{ flex: 1 }}>{children}</PageContainer>
+        <MobileBottomNav />
       </Box>
     </DashboardLayout>
   );

@@ -5,7 +5,7 @@ import {
     TextField, InputAdornment, Container, CircularProgress, 
     FormControl, InputLabel, Select, MenuItem, OutlinedInput,
     useTheme, Button, Alert, Paper,
-    Dialog, DialogTitle, DialogContent, DialogActions, Radio, RadioGroup, FormControlLabel
+    Dialog, DialogTitle, DialogContent, DialogActions, Radio, RadioGroup, FormControlLabel, Pagination
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -20,6 +20,8 @@ export default function MembersDirectory() {
     const { data: session, status } = useSession();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSkills, setSelectedSkills] = useState([]);
     const [selectedInterests, setSelectedInterests] = useState([]);
@@ -52,7 +54,7 @@ export default function MembersDirectory() {
                     
                     if (memberStatus === 'active' || memberStatus === 'probation' || session.user.role === 'admin') {
                         setHasAccess(true);
-                        await fetchMembers();
+                        await fetchMembers(1);
                     } else {
                         setHasAccess(false);
                         setLoading(false);
@@ -67,12 +69,15 @@ export default function MembersDirectory() {
         checkAccessAndFetch();
     }, [status, session, router]);
 
-    const fetchMembers = async () => {
+    const fetchMembers = async (pageNum = 1) => {
+        setLoading(true);
         try {
-            const res = await fetch('/api/v1/users?isPublic=true');
+            const res = await fetch(`/api/v1/users?isPublic=true&page=${pageNum}&limit=12`);
             if (res.ok) {
                 const data = await res.json();
                 setUsers(data.users || []);
+                setTotalPages(data.totalPages || 1);
+                setPage(data.page || 1);
                 
                 // Extract unique skills and interests
                 const skills = new Set();
@@ -91,6 +96,12 @@ export default function MembersDirectory() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (event, value) => {
+        setPage(value);
+        fetchMembers(value);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleSponsorClick = (user) => {
@@ -405,6 +416,21 @@ export default function MembersDirectory() {
                     </Grid>
                 )}
             </Grid>
+
+            {/* Pagination */}
+            {!loading && totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+                    <Pagination 
+                        count={totalPages} 
+                        page={page} 
+                        onChange={handlePageChange} 
+                        color="primary" 
+                        size="large"
+                        showFirstButton 
+                        showLastButton
+                    />
+                </Box>
+            )}
 
             {/* Sponsorship Dialog */}
             <Dialog open={sponsorDialogOpen} onClose={() => setSponsorDialogOpen(false)}>

@@ -1,6 +1,7 @@
 import { Client, Environment } from "square";
 import UserService from "../../users/service.js";
 import AuthService from "@/app/api/auth/[...nextauth]/service.js";
+import Constants from "@/lib/constants";
 
 export default class SubscriptionService {
   static processWebhook = async (payload) => {
@@ -58,6 +59,11 @@ export default class SubscriptionService {
         "membership.subscriptionStatus": subscriptionStatus,
         "membership.lastPaymentDate": new Date().toISOString()
       };
+
+      // Check if this is a new ACTIVE subscription
+      if (subscriptionStatus === 'ACTIVE' && labUser.membership?.subscriptionStatus !== 'ACTIVE') {
+          updateData.stake = (labUser.stake || 0) + Constants.ONBOARDING_REWARDS.SUBSCRIBE;
+      }
 
       const updatedUser = await UserService.updateUser(encryptedEmail, updateData);
       if (!updatedUser) {

@@ -4,7 +4,8 @@ import {
     Box, Typography, Button, Grid, Card, CardContent, CardActions, 
     Chip, Dialog, DialogTitle, DialogContent, DialogActions, 
     TextField, MenuItem, Select, InputLabel, FormControl, 
-    Tabs, Tab, Alert, LinearProgress, IconButton, Tooltip, Fab, Zoom, useTheme
+    Tabs, Tab, Alert, LinearProgress, IconButton, Tooltip, Fab, Zoom, useTheme,
+    Checkbox, FormControlLabel, List, ListItem, ListItemText, ListItemSecondaryAction, Pagination
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
@@ -16,18 +17,25 @@ import EditIcon from '@mui/icons-material/Edit';
 import UndoIcon from '@mui/icons-material/Undo';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import WhatshotIcon from '@mui/icons-material/Whatshot';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function BountiesPage() {
     const { data: session } = useSession();
     const theme = useTheme();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlight');
+    const action = searchParams.get('action');
     
     const [bounties, setBounties] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [userMembership, setUserMembership] = useState(null);
     const [tabValue, setTabValue] = useState(0); // 0: All, 1: Hours, 2: Community, 3: Completed
     const [openCreate, setOpenCreate] = useState(false);
@@ -36,14 +44,38 @@ export default function BountiesPage() {
     const [openSubmit, setOpenSubmit] = useState(false);
     const [submissionNote, setSubmissionNote] = useState('');
     const [submittingBountyId, setSubmittingBountyId] = useState(null);
+    const [openClaims, setOpenClaims] = useState(false);
+    const [selectedBountyForClaims, setSelectedBountyForClaims] = useState(null);
     const [newBounty, setNewBounty] = useState({
         title: '',
         description: '',
         rewardType: 'custom', // default for users
         rewardValue: '',
         stakeValue: 0, // Default additional stake is 0
-        recurrence: 'none'
+        recurrence: 'none',
+        isInfinite: false,
+        endsAt: '',
+        imageUrl: ''
     });
+    const [uploading, setUploading] = useState(false);
+
+    useEffect(() => {
+        if (action === 'new') {
+            setEditMode(false);
+            setNewBounty({
+                title: '',
+                description: '',
+                rewardType: 'custom',
+                rewardValue: '',
+                stakeValue: 0,
+                recurrence: 'none',
+                isInfinite: false,
+                endsAt: '',
+                imageUrl: ''
+            });
+            setOpenCreate(true);
+        }
+    }, [action]);
 
     useEffect(() => {
         if (highlightId && bounties.length > 0) {
@@ -68,23 +100,32 @@ export default function BountiesPage() {
                     console.error("Failed to fetch user membership", e);
                 }
             }
-            fetchBounties();
+            fetchBounties(1);
         };
         init();
     }, [session]);
 
-    const fetchBounties = async () => {
+    const fetchBounties = async (pageNum = 1) => {
+        setLoading(true);
         try {
-            const res = await fetch('/api/v1/bounties');
+            const res = await fetch(`/api/v1/bounties?page=${pageNum}&limit=9`);
             if (res.ok) {
                 const data = await res.json();
                 setBounties(data.bounties || []);
+                setTotalPages(data.totalPages || 1);
+                setPage(data.page || 1);
             }
         } catch (error) {
             console.error("Failed to fetch bounties", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (event, value) => {
+        setPage(value);
+        fetchBounties(value);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     // Check if user has access (Admin OR Active/Probation Membership)
@@ -111,7 +152,17 @@ export default function BountiesPage() {
     const handleOpenCreate = () => {
         setEditMode(false);
         setEditingBountyId(null);
-        setNewBounty({ title: '', description: '', rewardType: 'custom', rewardValue: '', stakeValue: 0, recurrence: 'none' });
+        setNewBounty({ 
+            title: '', 
+            description: '', 
+            rewardType: 'custom', 
+            rewardValue: '', 
+            stakeValue: 0, 
+            recurrence: 'none',
+            isInfinite: false,
+            endsAt: '',
+            imageUrl: ''
+        });
         setOpenCreate(true);
     };
 
@@ -124,9 +175,41 @@ export default function BountiesPage() {
             rewardType: bounty.rewardType,
             rewardValue: bounty.rewardValue,
             stakeValue: bounty.stakeValue,
-            recurrence: bounty.recurrence || 'none'
+            recurrence: bounty.recurrence || 'none',
+            isInfinite: bounty.isInfinite || false,
+            endsAt: bounty.endsAt ? new Date(bounty.endsAt).toISOString().split('T')[0] : '',
+            imageUrl: bounty.imageUrl || ''
         });
         setOpenCreate(true);
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                setNewBounty(prev => ({ ...prev, imageUrl: data.url }));
+            } else {
+                console.error("Upload failed");
+                alert("Failed to upload image");
+            }
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            alert("Error uploading image");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleSubmitBounty = async () => {
@@ -215,17 +298,61 @@ export default function BountiesPage() {
         }
     };
 
-    const handleVerify = async (bountyID) => {
+    const handleVerify = async (bountyID, claimUserID = null) => {
         try {
+            const body = { verifierID: session.user.userID };
+            if (claimUserID) body.claimUserID = claimUserID;
+
             const res = await fetch(`/api/v1/bounties?bountyID=${bountyID}&action=verify`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ verifierID: session.user.userID })
+                body: JSON.stringify(body)
             });
-            if (res.ok) fetchBounties();
+            if (res.ok) {
+                fetchBounties();
+                // If we are in the claims dialog, we might want to refresh that view or close it?
+                // For now, let's just refresh the bounties which updates the selectedBountyForClaims if we keep it in sync
+                if (selectedBountyForClaims && selectedBountyForClaims.bountyID === bountyID) {
+                    // We need to re-fetch or update the selected bounty locally
+                    // Ideally fetchBounties updates 'bounties' state, and we can derive selectedBounty from there
+                    // But selectedBountyForClaims is a separate state object. 
+                    // Let's just close the dialog for simplicity or re-fetch.
+                    setOpenClaims(false); 
+                }
+            }
         } catch (error) {
             console.error("Failed to verify bounty", error);
         }
+    };
+
+    const handleClawbackClaim = async (bountyID, claimUserID) => {
+        if (!confirm("Are you sure you want to remove this claim?")) return;
+        try {
+            const res = await fetch(`/api/v1/bounties?bountyID=${bountyID}&action=clawback`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userID: session.user.userID,
+                    claimUserID: claimUserID 
+                })
+            });
+            if (res.ok) {
+                fetchBounties();
+                setOpenClaims(false);
+            }
+        } catch (error) {
+            console.error("Failed to remove claim", error);
+        }
+    };
+
+    const handleOpenClaims = (bounty) => {
+        setSelectedBountyForClaims(bounty);
+        setOpenClaims(true);
+    };
+
+    const getUserClaim = (bounty) => {
+        if (!bounty.isInfinite || !bounty.claims) return null;
+        return bounty.claims.find(c => c.userID === session?.user?.userID);
     };
 
     const filteredBounties = bounties.filter(b => {
@@ -240,14 +367,24 @@ export default function BountiesPage() {
         <Box sx={{ p: { xs: 2, md: 3 }, pb: { xs: 10, md: 3 } }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>Bounty Board</Typography>
-                <Button 
-                    variant="contained" 
-                    startIcon={<AddIcon />} 
-                    onClick={handleOpenCreate}
-                    sx={{ display: { xs: 'none', md: 'flex' } }}
-                >
-                    Create Bounty
-                </Button>
+                <Box>
+                    <Button 
+                        variant="outlined" 
+                        component={Link}
+                        href="/dashboard/bounties/feed"
+                        sx={{ mr: 2, display: { xs: 'none', md: 'inline-flex' } }}
+                    >
+                        Feed View
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        startIcon={<AddIcon />} 
+                        onClick={handleOpenCreate}
+                        sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+                    >
+                        Create Bounty
+                    </Button>
+                </Box>
             </Box>
 
             <Tabs 
@@ -285,6 +422,19 @@ export default function BountiesPage() {
                                     transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
                                     transition: 'all 0.3s ease-in-out'
                                 }}>
+                                    {bounty.imageUrl && (
+                                        <Box 
+                                            component="img"
+                                            src={bounty.imageUrl}
+                                            alt={bounty.title}
+                                            sx={{
+                                                width: '100%',
+                                                height: 140,
+                                                objectFit: 'cover',
+                                                borderBottom: '1px solid rgba(0,0,0,0.12)'
+                                            }}
+                                        />
+                                    )}
                                     <CardContent sx={{ flexGrow: 1 }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                             <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -326,7 +476,11 @@ export default function BountiesPage() {
                                                 )}
                                             </Box>
                                         </Box>
-                                        <Typography variant="h6" gutterBottom>{bounty.title}</Typography>
+                                        <Link href={`/dashboard/bounties/${bounty.bountyID}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                            <Typography variant="h6" gutterBottom sx={{ '&:hover': { textDecoration: 'underline', color: 'primary.main' } }}>
+                                                {bounty.title}
+                                            </Typography>
+                                        </Link>
                                         <Typography variant="body2" color="text.secondary" paragraph>
                                             {bounty.description}
                                         </Typography>
@@ -338,7 +492,16 @@ export default function BountiesPage() {
                                                 <Chip icon={<MonetizationOnIcon />} label={bounty.rewardValue} color="secondary" size="small" />
                                             )}
                                             
-                                            {bounty.assignedTo && (
+                                            {bounty.isInfinite && (
+                                                <Chip 
+                                                    label="Infinite" 
+                                                    color="secondary" 
+                                                    variant="outlined" 
+                                                    size="small" 
+                                                />
+                                            )}
+
+                                            {bounty.assignedTo && !bounty.isInfinite && (
                                                 <Chip 
                                                     icon={<PersonIcon />} 
                                                     label={`Claimed by: ${bounty.assignedToUsername || bounty.assignedTo}`} 
@@ -349,75 +512,139 @@ export default function BountiesPage() {
                                         </Box>
                                     </CardContent>
                                     <CardActions sx={{ justifyContent: 'space-between' }}>
-                                        <Box sx={{ width: '100%' }}>
-                                            {bounty.status === 'open' && (
-                                                <Button size="small" variant="contained" fullWidth onClick={() => handleClaim(bounty.bountyID)}>
-                                                    Claim Bounty
-                                                </Button>
-                                            )}
-                                            {bounty.status === 'assigned' && bounty.assignedTo === session?.user?.userID && (
-                                                <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
-                                                    <Button 
-                                                        size="small" 
-                                                        variant="contained" 
-                                                        color="warning" 
-                                                        fullWidth
-                                                        onClick={() => handleOpenSubmit(bounty.bountyID)}
-                                                    >
-                                                        Submit Work
-                                                    </Button>
-                                                    {canClawback && (
-                                                        <Tooltip title="Unassign User (Clawback)">
+                                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            <Button 
+                                                size="small" 
+                                                variant="outlined" 
+                                                component={Link} 
+                                                href={`/dashboard/bounties/${bounty.bountyID}`}
+                                                fullWidth
+                                            >
+                                                View Details
+                                            </Button>
+                                            {bounty.isInfinite ? (
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                    {canEdit && (
+                                                        <Button 
+                                                            size="small" 
+                                                            variant="outlined" 
+                                                            fullWidth 
+                                                            onClick={() => handleOpenClaims(bounty)}
+                                                        >
+                                                            View Claims ({bounty.claims?.length || 0})
+                                                        </Button>
+                                                    )}
+                                                    
+                                                    {(() => {
+                                                        const userClaim = getUserClaim(bounty);
+                                                        if (!userClaim) {
+                                                            return (
+                                                                <Button size="small" variant="contained" fullWidth onClick={() => handleClaim(bounty.bountyID)}>
+                                                                    Claim Bounty
+                                                                </Button>
+                                                            );
+                                                        }
+                                                        if (userClaim.status === 'assigned') {
+                                                            return (
+                                                                <Button 
+                                                                    size="small" 
+                                                                    variant="contained" 
+                                                                    color="warning" 
+                                                                    fullWidth
+                                                                    onClick={() => handleOpenSubmit(bounty.bountyID)}
+                                                                >
+                                                                    Submit Work
+                                                                </Button>
+                                                            );
+                                                        }
+                                                        if (userClaim.status === 'completed') {
+                                                            return (
+                                                                <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
+                                                                    Pending Verification
+                                                                </Button>
+                                                            );
+                                                        }
+                                                        if (userClaim.status === 'verified') {
+                                                            return (
+                                                                <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
+                                                                    Verified
+                                                                </Button>
+                                                            );
+                                                        }
+                                                    })()}
+                                                </Box>
+                                            ) : (
+                                                <>
+                                                    {bounty.status === 'open' && (
+                                                        <Button size="small" variant="contained" fullWidth onClick={() => handleClaim(bounty.bountyID)}>
+                                                            Claim Bounty
+                                                        </Button>
+                                                    )}
+                                                    {bounty.status === 'assigned' && bounty.assignedTo === session?.user?.userID && (
+                                                        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
                                                             <Button 
                                                                 size="small" 
-                                                                color="error" 
-                                                                variant="outlined" 
-                                                                onClick={() => handleClawback(bounty.bountyID)}
+                                                                variant="contained" 
+                                                                color="warning" 
+                                                                fullWidth
+                                                                onClick={() => handleOpenSubmit(bounty.bountyID)}
                                                             >
-                                                                <UndoIcon />
+                                                                Submit Work
                                                             </Button>
-                                                        </Tooltip>
+                                                            {canClawback && (
+                                                                <Tooltip title="Unassign User (Clawback)">
+                                                                    <Button 
+                                                                        size="small" 
+                                                                        color="error" 
+                                                                        variant="outlined" 
+                                                                        onClick={() => handleClawback(bounty.bountyID)}
+                                                                    >
+                                                                        <UndoIcon />
+                                                                    </Button>
+                                                                </Tooltip>
+                                                            )}
+                                                        </Box>
                                                     )}
-                                                </Box>
-                                            )}
-                                            {bounty.status === 'assigned' && bounty.assignedTo !== session?.user?.userID && (
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <Button size="small" disabled fullWidth variant="outlined">Assigned</Button>
-                                                    {canClawback && (
-                                                        <Tooltip title="Unassign User (Clawback)">
+                                                    {bounty.status === 'assigned' && bounty.assignedTo !== session?.user?.userID && (
+                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                            <Button size="small" disabled fullWidth variant="outlined">Assigned</Button>
+                                                            {canClawback && (
+                                                                <Tooltip title="Unassign User (Clawback)">
+                                                                    <Button 
+                                                                        size="small" 
+                                                                        color="error" 
+                                                                        variant="outlined" 
+                                                                        onClick={() => handleClawback(bounty.bountyID)}
+                                                                    >
+                                                                        <UndoIcon />
+                                                                    </Button>
+                                                                </Tooltip>
+                                                            )}
+                                                        </Box>
+                                                    )}
+                                                    {bounty.status === 'completed' && (
+                                                        canEdit ? (
                                                             <Button 
                                                                 size="small" 
-                                                                color="error" 
-                                                                variant="outlined" 
-                                                                onClick={() => handleClawback(bounty.bountyID)}
+                                                                variant="contained" 
+                                                                color="success" 
+                                                                fullWidth 
+                                                                onClick={() => handleVerify(bounty.bountyID)}
                                                             >
-                                                                <UndoIcon />
+                                                                Verify & Award
                                                             </Button>
-                                                        </Tooltip>
+                                                        ) : (
+                                                            <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
+                                                                Pending Verification
+                                                            </Button>
+                                                        )
                                                     )}
-                                                </Box>
-                                            )}
-                                            {bounty.status === 'completed' && (
-                                                canEdit ? (
-                                                    <Button 
-                                                        size="small" 
-                                                        variant="contained" 
-                                                        color="success" 
-                                                        fullWidth 
-                                                        onClick={() => handleVerify(bounty.bountyID)}
-                                                    >
-                                                        Verify & Award
-                                                    </Button>
-                                                ) : (
-                                                    <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
-                                                        Pending Verification
-                                                    </Button>
-                                                )
-                                            )}
-                                            {bounty.status === 'verified' && (
-                                                <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
-                                                    Verified
-                                                </Button>
+                                                    {bounty.status === 'verified' && (
+                                                        <Button size="small" disabled fullWidth startIcon={<CheckCircleIcon />}>
+                                                            Verified
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                         </Box>
                                     </CardActions>
@@ -428,22 +655,22 @@ export default function BountiesPage() {
                 </Grid>
             )}
 
-            {/* Mobile Create FAB */}
-            <Zoom in={!loading}>
-                <Fab 
-                    color="primary" 
-                    aria-label="add" 
-                    onClick={handleOpenCreate}
-                    sx={{ 
-                        position: 'fixed', 
-                        bottom: 24, 
-                        right: 24, 
-                        display: { xs: 'flex', md: 'none' } 
-                    }}
-                >
-                    <AddIcon />
-                </Fab>
-            </Zoom>
+            {/* Pagination */}
+            {!loading && totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+                    <Pagination 
+                        count={totalPages} 
+                        page={page} 
+                        onChange={handlePageChange} 
+                        color="primary" 
+                        size="large"
+                        showFirstButton 
+                        showLastButton
+                    />
+                </Box>
+            )}
+
+
 
             <Dialog open={openCreate} onClose={() => setOpenCreate(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>{editMode ? 'Edit Bounty' : 'Create New Bounty'}</DialogTitle>
@@ -463,21 +690,81 @@ export default function BountiesPage() {
                             value={newBounty.description}
                             onChange={(e) => setNewBounty({...newBounty, description: e.target.value})}
                         />
+
+                        <Box>
+                            <input
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                id="raised-button-file"
+                                type="file"
+                                onChange={handleImageUpload}
+                            />
+                            <label htmlFor="raised-button-file">
+                                <Button 
+                                    variant="outlined" 
+                                    component="span" 
+                                    startIcon={<CloudUploadIcon />}
+                                    disabled={uploading}
+                                    fullWidth
+                                >
+                                    {uploading ? 'Uploading...' : 'Upload Image (Optional)'}
+                                </Button>
+                            </label>
+                            {newBounty.imageUrl && (
+                                <Box sx={{ mt: 1, position: 'relative' }}>
+                                    <img 
+                                        src={newBounty.imageUrl} 
+                                        alt="Preview" 
+                                        style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 4 }} 
+                                    />
+                                    <IconButton 
+                                        size="small" 
+                                        sx={{ position: 'absolute', top: 5, right: 5, bgcolor: 'rgba(255,255,255,0.8)' }}
+                                        onClick={() => setNewBounty({...newBounty, imageUrl: ''})}
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </Box>
+                            )}
+                        </Box>
                         
                         {session?.user?.role === 'admin' && (
-                            <FormControl fullWidth>
-                                <InputLabel>Recurrence</InputLabel>
-                                <Select
-                                    value={newBounty.recurrence || 'none'}
-                                    label="Recurrence"
-                                    onChange={(e) => setNewBounty({...newBounty, recurrence: e.target.value})}
-                                >
-                                    <MenuItem value="none">None (One-time)</MenuItem>
-                                    <MenuItem value="daily">Daily</MenuItem>
-                                    <MenuItem value="weekly">Weekly</MenuItem>
-                                    <MenuItem value="monthly">Monthly</MenuItem>
-                                </Select>
-                            </FormControl>
+                            <>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={newBounty.isInfinite || false}
+                                            onChange={(e) => setNewBounty({...newBounty, isInfinite: e.target.checked})}
+                                        />
+                                    }
+                                    label="Infinite Claims (Multi-user)"
+                                />
+                                
+                                {newBounty.isInfinite && (
+                                    <TextField
+                                        label="End Date (Optional)"
+                                        type="date"
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                        value={newBounty.endsAt || ''}
+                                        onChange={(e) => setNewBounty({...newBounty, endsAt: e.target.value})}
+                                    />
+                                )}
+
+                                <FormControl fullWidth>
+                                    <InputLabel>Recurrence</InputLabel>
+                                    <Select
+                                        value={newBounty.recurrence || 'none'}
+                                        label="Recurrence"
+                                        onChange={(e) => setNewBounty({...newBounty, recurrence: e.target.value})}
+                                    >
+                                        <MenuItem value="none">None (One-time)</MenuItem>
+                                        <MenuItem value="daily">Daily</MenuItem>
+                                        <MenuItem value="weekly">Weekly</MenuItem>
+                                        <MenuItem value="monthly">Monthly</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </>
                         )}
 
                         <FormControl fullWidth>
@@ -543,6 +830,77 @@ export default function BountiesPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Claims Dialog */}
+            <Dialog open={openClaims} onClose={() => setOpenClaims(false)} maxWidth="md" fullWidth>
+                <DialogTitle>Claims for {selectedBountyForClaims?.title}</DialogTitle>
+                <DialogContent>
+                    <List>
+                        {selectedBountyForClaims?.claims?.length === 0 && (
+                            <Typography color="text.secondary" sx={{ p: 2 }}>No claims yet.</Typography>
+                        )}
+                        {selectedBountyForClaims?.claims?.map((claim) => (
+                            <ListItem key={claim.claimID} divider>
+                                <ListItemText
+                                    primary={claim.username || claim.userID}
+                                    secondary={
+                                        <>
+                                            <Typography component="span" variant="body2" color="text.primary">
+                                                Status: {claim.status}
+                                            </Typography>
+                                            {claim.submission && (
+                                                <Box sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                                    <Typography variant="caption" display="block">Submission:</Typography>
+                                                    {claim.submission.note}
+                                                </Box>
+                                            )}
+                                        </>
+                                    }
+                                />
+                                <ListItemSecondaryAction>
+                                    {claim.status === 'completed' && (
+                                        <Button 
+                                            variant="contained" 
+                                            color="success" 
+                                            size="small"
+                                            onClick={() => handleVerify(selectedBountyForClaims.bountyID, claim.userID)}
+                                            sx={{ mr: 1 }}
+                                        >
+                                            Verify
+                                        </Button>
+                                    )}
+                                    {claim.status === 'verified' && (
+                                        <Chip label="Verified" color="success" size="small" icon={<CheckCircleIcon />} sx={{ mr: 1 }} />
+                                    )}
+                                    <IconButton 
+                                        edge="end" 
+                                        aria-label="delete"
+                                        onClick={() => handleClawbackClaim(selectedBountyForClaims.bountyID, claim.userID)}
+                                        color="error"
+                                        size="small"
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </ListItemSecondaryAction>
+                            </ListItem>
+                        ))}
+                    </List>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenClaims(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Zoom in={true} style={{ transitionDelay: '300ms' }}>
+                <Fab 
+                    color="secondary" 
+                    aria-label="feed" 
+                    sx={{ position: 'fixed', bottom: 16, right: 16, display: { xs: 'flex', md: 'none' } }}
+                    onClick={() => router.push('/dashboard/bounties/feed')}
+                >
+                    <WhatshotIcon />
+                </Fab>
+            </Zoom>
         </Box>
     );
 }

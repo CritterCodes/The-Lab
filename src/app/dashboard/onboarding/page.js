@@ -106,6 +106,9 @@ export default function OnboardingPage() {
                 <Typography variant="body1" color="text.secondary" paragraph>
                     Please complete the following steps to apply for membership.
                 </Typography>
+                <Alert severity="info" sx={{ mb: 3, border: '1px solid #2196f3' }}>
+                    ✨ <strong>Reward:</strong> Earn <strong>10 Stake</strong> upon completion!
+                </Alert>
 
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

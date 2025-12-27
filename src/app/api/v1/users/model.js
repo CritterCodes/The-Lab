@@ -55,20 +55,41 @@ export default class UserModel {
     /**
      * ✅ Get all users
      * @param {boolean} isPublic - If true, return only public users who are active or on probation
+     * @param {number} skip - Number of records to skip
+     * @param {number} limit - Number of records to return
      * @returns {Array} - Array of all users
      */
-    static getAllUsers = async (isPublic = false) => {
+    static getAllUsers = async (isPublic = false, skip = 0, limit = 0) => {
         try {
             const dbUsers = await db.dbUsers();
             const filter = isPublic ? { 
                 isPublic: true,
                 "membership.status": { $in: ["active", "probation"] }
             } : {};
-            const users = await dbUsers.find(filter).toArray();
+            
+            let cursor = dbUsers.find(filter);
+            if (skip > 0) cursor = cursor.skip(skip);
+            if (limit > 0) cursor = cursor.limit(limit);
+            
+            const users = await cursor.toArray();
             return users;
         } catch (error) {
             console.error("Error retrieving all users:", error);
             return [];
+        }
+    }
+
+    static countUsers = async (isPublic = false) => {
+        try {
+            const dbUsers = await db.dbUsers();
+            const filter = isPublic ? { 
+                isPublic: true,
+                "membership.status": { $in: ["active", "probation"] }
+            } : {};
+            return await dbUsers.countDocuments(filter);
+        } catch (error) {
+            console.error("Error counting users:", error);
+            return 0;
         }
     }
 
@@ -153,4 +174,50 @@ export default class UserModel {
             return false;
         }
     }
-}
+    static async getTopStake(limit = 10) {
+        try {
+            const dbUsers = await db.dbUsers();
+            return await dbUsers.find({ stake: { $gt: 0 } })
+                .sort({ stake: -1 })
+                .limit(limit)
+                .project({ firstName: 1, lastName: 1, username: 1, image: 1, stake: 1, userID: 1 })
+                .toArray();
+        } catch (error) {
+            console.error("Error getting top stake:", error);
+            return [];
+        }
+    }
+
+    static async getTopVolunteerHours(limit = 10) {
+        try {
+            const dbUsers = await db.dbUsers();
+            const pipeline = [
+                { $unwind: "$membership.volunteerLog" },
+                { 
+                    $match: { 
+                        $or: [
+                            { "membership.volunteerLog.status": "approved" },
+                            { "membership.volunteerLog.status": { $exists: false } },
+                            { "membership.volunteerLog.status": null }
+                        ]
+                    } 
+                },
+                {
+                    $group: {
+                        _id: "$userID",
+                        firstName: { $first: "$firstName" },
+                        lastName: { $first: "$lastName" },
+                        image: { $first: "$image" },
+                        username: { $first: "$username" },
+                        totalHours: { $sum: { $toDouble: "$membership.volunteerLog.hours" } }
+                    }
+                },
+                { $sort: { totalHours: -1 } },
+                { $limit: limit }
+            ];
+            return await dbUsers.aggregate(pipeline).toArray();
+        } catch (error) {
+            console.error("Error getting top volunteer hours:", error);
+            return [];
+        }
+    }}

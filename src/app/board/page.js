@@ -6,6 +6,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import EventIcon from '@mui/icons-material/Event';
 import PeopleIcon from '@mui/icons-material/People';
 import Link from 'next/link';
+import QRCode from "react-qr-code";
 
 const MotionCard = motion(Card);
 
@@ -104,6 +105,26 @@ export default function BoardDashboard() {
                     </Grid>
                 ))}
             </Grid>
+
+            {/* Check-in QR Code */}
+            <Box sx={{ 
+                position: 'absolute', 
+                bottom: 40, 
+                right: 40, 
+                bgcolor: 'white', 
+                p: 2, 
+                borderRadius: 2,
+                boxShadow: theme.shadows[8],
+                textAlign: 'center'
+            }}>
+                <QRCode 
+                    value={`${process.env.NEXT_PUBLIC_URL}/dashboard/checkin`}
+                    size={150}
+                />
+                <Typography variant="subtitle1" sx={{ mt: 1, fontWeight: 'bold', color: 'black' }}>
+                    Scan to Check In
+                </Typography>
+            </Box>
         </Box>
     );
 }

@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../../v1/users/class';
 import UserModel from './model';
+import Constants from '@/lib/constants';
 import { sendVerificationEmail, sendInviteEmail } from '@/app/utils/email.util.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -85,7 +86,7 @@ export default class AuthService {
             googleId || '', // googleId
             '', // bio
             [], // skills
-            0, // stake
+            Constants.ONBOARDING_REWARDS.REGISTER, // stake
             image || '' // image
         );
         console.log("newUser", newUser);
@@ -143,7 +144,9 @@ export default class AuthService {
             lastName: user.lastName,
             email: this.decryptEmail(user.email), // return decrypted email
             role: user.role,
-            image: user.image
+            image: user.image,
+            discordId: user.discordId,
+            username: user.username
         };
     }
 
@@ -187,6 +190,7 @@ export default class AuthService {
 
         user.status = 'verified';
         user.verificationToken = null;
+        user.stake = (user.stake || 0) + Constants.ONBOARDING_REWARDS.VERIFY_EMAIL;
         await UserModel.updateById(user.userID, user);
 
         return { message: "Email successfully verified." };

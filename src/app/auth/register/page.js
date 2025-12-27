@@ -1,6 +1,7 @@
 "use client";
 import { signIn } from "next-auth/react";
 import React, { useState, useRef } from "react";
+import { useSearchParams } from 'next/navigation';
 import ReCAPTCHA from "react-google-recaptcha";
 import {
   TextField,
@@ -27,6 +28,8 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState("");
   const recaptchaRef = useRef(null);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -64,7 +67,7 @@ const RegisterPage = () => {
   };
 
   const handleOAuthSignIn = (provider) => {
-    signIn(provider, { callbackUrl: "/dashboard" });
+    signIn(provider, { callbackUrl });
   };
 
   return (
@@ -92,6 +95,9 @@ const RegisterPage = () => {
               <Typography variant="h6" gutterBottom sx={{ mt: 4, color: 'primary.main' }}>
                 Membership Process Overview:
               </Typography>
+              <Alert severity="info" sx={{ mb: 2, border: '1px solid #4caf50', color: '#2e7d32' }}>
+                  ✨ <strong>Earn Rewards:</strong> Get <strong>10 Stake</strong> just for registering!
+              </Alert>
               <List>
                 <ListItem disablePadding sx={{ mb: 2, display: 'block' }}>
                   <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'primary.main' }}>Submit Application</Typography>

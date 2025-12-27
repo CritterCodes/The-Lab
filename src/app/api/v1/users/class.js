@@ -43,6 +43,7 @@ export default class User {
         this.updatedAt = new Date();
         this.verificationToken = this.generateVerificationToken();
         this.stake = stake || 0; // ✅ Community Involvement Score
+        this.badges = []; // ✅ Earned Badges
         
         // ✅ Privacy Settings
         this.privacy = {

@@ -9,6 +9,8 @@ import {
     sendBountySubmittedEmail, 
     sendBountyVerifiedEmail 
 } from "../../../utils/email.util";
+import DiscordService from "@/lib/discord";
+import Constants from "@/lib/constants";
 import { v4 as uuidv4 } from 'uuid';
 
 export default class BountyService {
@@ -47,7 +49,10 @@ export default class BountyService {
             totalStake, // Store the total value
             data.requirements,
             data.recurrence,
-            data.startsAt
+            data.startsAt,
+            data.isInfinite,
+            data.endsAt,
+            data.imageUrl
         );
         
         const createdBounty = await BountyModel.createBounty(bounty);
@@ -97,6 +102,34 @@ export default class BountyService {
                 }
             }
             
+            // 3. Discord Notification
+            try {
+                const BOUNTY_CHANNEL_ID = process.env.DISCORD_BOUNTY_CHANNEL_ID || '1351948796866854953';
+                const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://the-lab.fablabfortsmith.org';
+                const bountyUrl = `${baseUrl}/dashboard/bounties/${bounty.bountyID}`;
+                
+                // We don't await this to block the response, but we want to log if it fails
+                DiscordService.sendChannelMessage(BOUNTY_CHANNEL_ID, {
+                    embeds: [{
+                        title: `🆕 New Bounty: ${bounty.title}`,
+                        description: bounty.description.length > 200 ? bounty.description.substring(0, 200) + '...' : bounty.description,
+                        url: bountyUrl,
+                        color: 0x4caf50, // Green
+                        fields: [
+                            { name: "Reward", value: `${bounty.rewardValue} ${bounty.rewardType}`, inline: true },
+                            { name: "Stake", value: `${bounty.stakeValue} pts`, inline: true },
+                            { name: "Type", value: bounty.isInfinite ? "Infinite (Multi-user)" : "Single Claim", inline: true }
+                        ],
+                        footer: { text: "FabLab Fort Smith • The Lab" },
+                        timestamp: new Date().toISOString()
+                    }]
+                }).then(() => console.log("✅ Discord notification sent."))
+                  .catch(err => console.error("❌ Failed to send Discord notification:", err));
+
+            } catch (discordErr) {
+                console.error("❌ Error preparing Discord notification:", discordErr);
+            }
+
             if (notifications.length === 0) {
                 console.warn("⚠️ No notifications were queued. This usually means there are no OTHER active members besides the creator.");
             } else {
@@ -110,28 +143,68 @@ export default class BountyService {
         return createdBounty;
     }
 
-    static async getAllBounties(status) {
-        const filter = {
-            ...(status ? { status } : {}),
-            $or: [
-                { startsAt: { $exists: false } },
-                { startsAt: { $lte: new Date() } }
-            ]
-        };
-        const bounties = await BountyModel.getAllBounties(filter);
+    static async getBounty(bountyID) {
+        const bounty = await BountyModel.getBountyById(bountyID);
+        if (!bounty) return null;
 
         // Enrich with usernames
         const allUsers = await UserModel.getAllUsers();
         const userMap = {};
         allUsers.forEach(u => {
-            userMap[u.userID] = u.username || u.firstName || "Unknown";
+            userMap[u.userID] = {
+                username: u.username || u.firstName || "Unknown",
+                image: u.image
+            };
         });
 
-        return bounties.map(b => ({
+        return {
+            ...bounty,
+            assignedToUsername: userMap[bounty.assignedTo]?.username || bounty.assignedTo,
+            creatorUsername: userMap[bounty.creatorID]?.username || bounty.creatorID,
+            creatorImage: userMap[bounty.creatorID]?.image,
+            claims: bounty.claims ? bounty.claims.map(c => ({
+                ...c,
+                username: userMap[c.userID]?.username || c.userID
+            })) : []
+        };
+    }
+
+    static async getAllBounties(query = {}, page = 1, limit = 10) {
+        const filter = {
+            ...(query.status ? { status: query.status } : {}),
+            ...(query.creatorID ? { creatorID: query.creatorID } : {}),
+            $or: [
+                { startsAt: { $exists: false } },
+                { startsAt: { $lte: new Date() } }
+            ]
+        };
+
+        const skip = (page - 1) * limit;
+        const bounties = await BountyModel.getAllBounties(filter, skip, limit);
+        const total = await BountyModel.countBounties(filter);
+
+        // Enrich with usernames
+        const allUsers = await UserModel.getAllUsers();
+        const userMap = {};
+        allUsers.forEach(u => {
+            userMap[u.userID] = {
+                username: u.username || u.firstName || "Unknown",
+                image: u.image
+            };
+        });
+
+        const enrichedBounties = bounties.map(b => ({
             ...b,
-            assignedToUsername: userMap[b.assignedTo] || b.assignedTo,
-            creatorUsername: userMap[b.creatorID] || b.creatorID
+            assignedToUsername: userMap[b.assignedTo]?.username || b.assignedTo,
+            creatorUsername: userMap[b.creatorID]?.username || b.creatorID,
+            creatorImage: userMap[b.creatorID]?.image,
+            claims: b.claims ? b.claims.map(c => ({
+                ...c,
+                username: userMap[c.userID]?.username || c.userID
+            })) : []
         }));
+
+        return { bounties: enrichedBounties, total, page, totalPages: Math.ceil(total / limit) };
     }
 
     static async getBountyById(bountyID) {
@@ -141,13 +214,40 @@ export default class BountyService {
     static async assignBounty(bountyID, userID) {
         const bounty = await BountyModel.getBountyById(bountyID);
         if (!bounty) throw new Error("Bounty not found");
-        if (bounty.status !== 'open') throw new Error("Bounty is not open");
 
-        const result = await BountyModel.updateBounty(bountyID, {
-            status: 'assigned',
-            assignedTo: userID,
-            assignedAt: new Date()
-        });
+        // Infinite Bounty Logic
+        if (bounty.isInfinite) {
+            if (bounty.endsAt && new Date() > new Date(bounty.endsAt)) {
+                throw new Error("This infinite bounty has expired.");
+            }
+            
+            // Check if user already has an active claim
+            const existingClaim = (bounty.claims || []).find(c => c.userID === userID && c.status === 'active');
+            if (existingClaim) {
+                throw new Error("You already have an active claim on this bounty.");
+            }
+
+            // Add new claim
+            const newClaim = {
+                claimID: uuidv4(),
+                userID: userID,
+                claimedAt: new Date(),
+                status: 'active'
+            };
+
+            await BountyModel.updateBounty(bountyID, {
+                claims: [...(bounty.claims || []), newClaim]
+            });
+        } else {
+            // Standard Bounty Logic
+            if (bounty.status !== 'open') throw new Error("Bounty is not open");
+
+            await BountyModel.updateBounty(bountyID, {
+                status: 'assigned',
+                assignedTo: userID,
+                assignedAt: new Date()
+            });
+        }
 
         // Fetch users for notifications
         const assignee = await UserModel.getUserByQuery({ userID: userID });
@@ -200,16 +300,33 @@ export default class BountyService {
         const bounty = await BountyModel.getBountyById(bountyID);
         if (!bounty) throw new Error("Bounty not found");
         
-        // Allow submission if assigned OR if it's open (first come first serve logic could apply, but let's stick to assigned or open)
-        // If it's assigned, only the assignee can submit
-        if (bounty.status === 'assigned' && bounty.assignedTo !== userID) {
-            throw new Error("This bounty is assigned to someone else.");
-        }
+        let result;
 
-        const result = await BountyModel.updateBounty(bountyID, {
-            status: 'completed', // Pending verification
-            submissions: [...(bounty.submissions || []), { userID, ...submissionData, date: new Date() }]
-        });
+        if (bounty.isInfinite) {
+            // Find active claim
+            const claims = bounty.claims || [];
+            const claimIndex = claims.findIndex(c => c.userID === userID && c.status === 'active');
+            
+            if (claimIndex === -1) {
+                throw new Error("You don't have an active claim on this bounty.");
+            }
+
+            // Update claim
+            claims[claimIndex].status = 'submitted';
+            claims[claimIndex].submission = { ...submissionData, date: new Date() };
+
+            result = await BountyModel.updateBounty(bountyID, { claims });
+        } else {
+            // Standard Logic
+            if (bounty.status === 'assigned' && bounty.assignedTo !== userID) {
+                throw new Error("This bounty is assigned to someone else.");
+            }
+
+            result = await BountyModel.updateBounty(bountyID, {
+                status: 'completed', // Pending verification
+                submissions: [...(bounty.submissions || []), { userID, ...submissionData, date: new Date() }]
+            });
+        }
 
         // Notify Creator
         if (bounty.creatorID && bounty.creatorID !== userID) {
@@ -248,19 +365,38 @@ export default class BountyService {
         return result;
     }
 
-    static async verifyBounty(bountyID, verifierID) {
+    static async verifyBounty(bountyID, verifierID, claimUserID = null) {
         const bounty = await BountyModel.getBountyById(bountyID);
         if (!bounty) throw new Error("Bounty not found");
-        if (bounty.status !== 'completed') throw new Error("Bounty is not pending verification");
 
-        // 1. Update Bounty Status
-        await BountyModel.updateBounty(bountyID, {
-            status: 'verified',
-            completedAt: new Date()
-        });
+        let assigneeID = null;
 
-        // 2. Award Stake and Rewards
-        const assigneeID = bounty.assignedTo || (bounty.submissions.length > 0 ? bounty.submissions[0].userID : null);
+        if (bounty.isInfinite) {
+            if (!claimUserID) throw new Error("Claim User ID is required for infinite bounties.");
+            
+            const claims = bounty.claims || [];
+            const claimIndex = claims.findIndex(c => c.userID === claimUserID && c.status === 'submitted');
+            
+            if (claimIndex === -1) throw new Error("No submitted claim found for this user.");
+
+            // Update claim
+            claims[claimIndex].status = 'verified';
+            claims[claimIndex].verifiedAt = new Date();
+            claims[claimIndex].verifiedBy = verifierID;
+
+            await BountyModel.updateBounty(bountyID, { claims });
+            assigneeID = claimUserID;
+        } else {
+            if (bounty.status !== 'completed') throw new Error("Bounty is not pending verification");
+
+            // 1. Update Bounty Status
+            await BountyModel.updateBounty(bountyID, {
+                status: 'verified',
+                completedAt: new Date()
+            });
+            
+            assigneeID = bounty.assignedTo || (bounty.submissions.length > 0 ? bounty.submissions[0].userID : null);
+        }
         
         if (assigneeID) {
             const user = await UserModel.getUserByQuery({ userID: assigneeID });
@@ -283,6 +419,46 @@ export default class BountyService {
                         ...user.membership,
                         volunteerLog: [newLog, ...(user.membership.volunteerLog || [])]
                     };
+
+                    // Check for Volunteer Star Badge (10+ Hours)
+                    const totalHours = (updates.membership.volunteerLog || []).reduce((acc, log) => acc + (Number(log.hours) || 0), 0);
+                    if (totalHours >= 10 && !user.badges?.includes(Constants.BADGES.VOLUNTEER_STAR.id)) {
+                        updates.badges = [...(user.badges || []), Constants.BADGES.VOLUNTEER_STAR.id];
+                        // Notify about badge
+                        await NotificationService.create({
+                            userID: assigneeID,
+                            type: 'success',
+                            title: 'New Badge Earned!',
+                            message: `You earned the "${Constants.BADGES.VOLUNTEER_STAR.name}" badge for logging 10+ volunteer hours!`,
+                            link: `/dashboard/${assigneeID}/profile`,
+                            metadata: { badgeID: Constants.BADGES.VOLUNTEER_STAR.id }
+                        });
+                    }
+                }
+
+                // Check for Bounty Hunter Badge (5+ Bounties)
+                // We need to count verified bounties for this user. 
+                // Since we don't have a direct count in user object, we might need to query bounties or just increment a counter if we had one.
+                // For now, let's query the bounties where assignedTo == userID AND status == verified
+                // OR claims where userID == userID AND status == verified
+                
+                // This query might be expensive, so maybe we just check if they have 4 and this is the 5th?
+                // Let's do a quick count query.
+                const completedBountiesCount = await BountyModel.countUserCompletedBounties(assigneeID);
+                // Add 1 for the current one (since it might not be in the count yet depending on when we updated status)
+                // Actually we updated status above.
+                
+                if ((completedBountiesCount + 1) >= 5 && !user.badges?.includes(Constants.BADGES.BOUNTY_HUNTER.id)) {
+                     updates.badges = [...(updates.badges || user.badges || []), Constants.BADGES.BOUNTY_HUNTER.id];
+                     // Notify about badge
+                        await NotificationService.create({
+                            userID: assigneeID,
+                            type: 'success',
+                            title: 'New Badge Earned!',
+                            message: `You earned the "${Constants.BADGES.BOUNTY_HUNTER.name}" badge for completing 5+ bounties!`,
+                            link: `/dashboard/${assigneeID}/profile`,
+                            metadata: { badgeID: Constants.BADGES.BOUNTY_HUNTER.id }
+                        });
                 }
 
                 await UserModel.updateUser({ userID: assigneeID }, updates);
@@ -388,7 +564,7 @@ export default class BountyService {
         return await BountyModel.updateBounty(bountyID, updateData);
     }
 
-    static async clawbackBounty(bountyID, userID) {
+    static async clawbackBounty(bountyID, userID, claimUserID = null) {
         const bounty = await BountyModel.getBountyById(bountyID);
         if (!bounty) throw new Error("Bounty not found");
 
@@ -400,14 +576,98 @@ export default class BountyService {
             throw new Error("Only the creator or an admin can clawback this bounty");
         }
 
-        if (bounty.status !== 'assigned') {
-            throw new Error("Bounty is not currently assigned");
+        if (bounty.isInfinite) {
+            if (!claimUserID) throw new Error("Claim User ID is required to clawback an infinite bounty claim.");
+            
+            const claims = bounty.claims || [];
+            const newClaims = claims.filter(c => c.userID !== claimUserID);
+            
+            if (newClaims.length === claims.length) {
+                throw new Error("Claim not found for this user.");
+            }
+
+            return await BountyModel.updateBounty(bountyID, { claims: newClaims });
+        } else {
+            if (bounty.status !== 'assigned') {
+                throw new Error("Bounty is not currently assigned");
+            }
+
+            return await BountyModel.updateBounty(bountyID, {
+                status: 'open',
+                assignedTo: null,
+                assignedAt: null
+            });
+        }
+    }
+
+    static async toggleLike(bountyID, userID) {
+        const bounty = await BountyModel.getBountyById(bountyID);
+        if (!bounty) throw new Error("Bounty not found");
+
+        if (bounty.likes && bounty.likes.includes(userID)) {
+            await BountyModel.unlikeBounty(bountyID, userID);
+            return { liked: false };
+        } else {
+            await BountyModel.likeBounty(bountyID, userID);
+
+            // Notify creator
+            if (bounty.creatorID !== userID) {
+                try {
+                    const liker = await UserModel.getUserByQuery({ userID });
+                    const likerName = liker ? `${liker.firstName} ${liker.lastName}` : "Someone";
+
+                    await NotificationService.create({
+                        userID: bounty.creatorID,
+                        type: 'info',
+                        title: 'New Like',
+                        message: `${likerName} liked your bounty "${bounty.title}"`,
+                        link: `/dashboard/bounties?highlight=${bountyID}`,
+                        metadata: { bountyID: bountyID, type: 'bounty_like' }
+                    });
+                } catch (error) {
+                    console.error("Failed to send like notification:", error);
+                }
+            }
+
+            return { liked: true };
+        }
+    }
+
+    static async addComment(bountyID, userID, text) {
+        const user = await UserModel.getUserByQuery({ userID });
+        if (!user) throw new Error("User not found");
+
+        const comment = {
+            id: uuidv4(),
+            userID,
+            text,
+            createdAt: new Date(),
+            user: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                image: user.image
+            }
+        };
+
+        await BountyModel.addComment(bountyID, comment);
+
+        // Notify creator
+        try {
+            const bounty = await BountyModel.getBountyById(bountyID);
+            if (bounty && bounty.creatorID !== userID) {
+                await NotificationService.create({
+                    userID: bounty.creatorID,
+                    type: 'info',
+                    title: 'New Comment',
+                    message: `${user.firstName} ${user.lastName} commented on your bounty "${bounty.title}"`,
+                    link: `/dashboard/bounties?highlight=${bountyID}`,
+                    metadata: { bountyID: bountyID, type: 'bounty_comment' }
+                });
+            }
+        } catch (error) {
+            console.error("Failed to send comment notification:", error);
         }
 
-        return await BountyModel.updateBounty(bountyID, {
-            status: 'open',
-            assignedTo: null,
-            assignedAt: null
-        });
+        return comment;
     }
 }

@@ -6,7 +6,7 @@ import {
     Checkbox, FormControlLabel, TextField, Select, MenuItem,
     InputLabel, FormControl, Chip, Divider, List, ListItem, ListItemText, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Paper,
-    useTheme, useMediaQuery, Tabs, Tab, Card, CardContent, Stack, AppBar, Toolbar, Tooltip
+    useTheme, useMediaQuery, Tabs, Tab, Card, CardContent, Stack, AppBar, Toolbar, Tooltip, Grid
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -15,7 +15,9 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import NudgeConfirmDialog from './NudgeConfirmDialog';
+import Constants from '@/lib/constants';
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -53,6 +55,7 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
         if (user) {
             setFormData({
                 ...user,
+                badges: user.badges || [],
                 membership: {
                     status: 'registered',
                     volunteerLog: [],
@@ -83,7 +86,8 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
             date: newLog.date,
             hours: Number(newLog.hours),
             description: newLog.description,
-            verifiedBy: 'Admin' // In a real app, use session user
+            verifiedBy: 'Admin', // In a real app, use session user
+            status: 'approved'
         };
 
         setFormData(prev => ({
@@ -185,7 +189,8 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                     membership: formData.membership,
                     role: formData.role,
                     boardPosition: formData.boardPosition,
-                    squareID: formData.squareID
+                    squareID: formData.squareID,
+                    badges: formData.badges
                 })
             });
 
@@ -324,6 +329,7 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                         <Tab icon={<AssignmentIcon />} iconPosition="start" label={isMobile ? "Progress" : "Progress"} />
                         <Tab icon={<HistoryIcon />} iconPosition="start" label={isMobile ? "Logs" : "Volunteer Logs"} />
                         <Tab icon={<SettingsIcon />} iconPosition="start" label={isMobile ? "Admin" : "Admin Actions"} />
+                        <Tab icon={<EmojiEventsIcon />} iconPosition="start" label={isMobile ? "Badges" : "Badges"} />
                     </Tabs>
                 </Box>
 
@@ -704,6 +710,34 @@ export default function MemberDialog({ open, onClose, user, onUpdate }) {
                             />
                         )}
                     </Box>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={3}>
+                    <Typography variant="h6" gutterBottom>Manage Badges</Typography>
+                    <Grid container spacing={2}>
+                        {Object.values(Constants.BADGES).map((badge) => (
+                            <Grid item xs={12} sm={6} key={badge.id}>
+                                <Paper variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Checkbox 
+                                        checked={(formData.badges || []).includes(badge.id)}
+                                        onChange={(e) => {
+                                            const newBadges = e.target.checked 
+                                                ? [...(formData.badges || []), badge.id]
+                                                : (formData.badges || []).filter(b => b !== badge.id);
+                                            setFormData(prev => ({ ...prev, badges: newBadges }));
+                                        }}
+                                    />
+                                    <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="h5">{badge.icon}</Typography>
+                                            <Typography variant="subtitle1" fontWeight="bold">{badge.name}</Typography>
+                                        </Box>
+                                        <Typography variant="body2" color="text.secondary">{badge.description}</Typography>
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                        ))}
+                    </Grid>
                 </TabPanel>
             </DialogContent>
             

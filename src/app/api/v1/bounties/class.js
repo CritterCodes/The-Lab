@@ -10,7 +10,10 @@ export default class Bounty {
         stakeValue, // Points awarded for completion
         requirements = [],
         recurrence = 'none', // 'none', 'daily', 'weekly', 'monthly'
-        startsAt = null
+        startsAt = null,
+        isInfinite = false,
+        endsAt = null,
+        imageUrl = null
     ) {
         this.bountyID = `bounty-${uuidv4().slice(0, 8)}`;
         this.title = title;
@@ -22,12 +25,16 @@ export default class Bounty {
         this.requirements = requirements;
         this.recurrence = recurrence;
         this.startsAt = startsAt ? new Date(startsAt) : new Date();
+        this.isInfinite = isInfinite;
+        this.endsAt = endsAt ? new Date(endsAt) : null;
+        this.imageUrl = imageUrl;
         
         this.status = 'open'; // open, assigned, completed, verified, cancelled
-        this.assignedTo = null; // userID
+        this.assignedTo = null; // userID (Legacy/Single claim)
         this.assignedAt = null;
         
-        this.submissions = []; // Array of { userID, submissionText/Link, date }
+        this.claims = []; // Array of { claimID, userID, claimedAt, status, submission: { text, date } }
+        this.submissions = []; // Legacy/Single claim submissions
         
         this.createdAt = new Date();
         this.updatedAt = new Date();

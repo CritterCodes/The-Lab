@@ -18,7 +18,9 @@ export default async function middleware(req) {
 
     // ✅ Block protected routes if not authenticated
     if (!session) {
-        return NextResponse.redirect(new URL("/auth/signin", req.url));
+        const signInUrl = new URL("/auth/signin", req.url);
+        signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname + req.nextUrl.search);
+        return NextResponse.redirect(signInUrl);
     }
 
     // ✅ If authenticated, allow access to dashboard routes

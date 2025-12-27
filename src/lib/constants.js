@@ -13,7 +13,26 @@ const Constants = {
         'Artist': '1453264892059582536',
     },
     LAB_RATZ_ROLE_ID: '1348382987611275386',
-    REQUIRED_VOLUNTEER_HOURS: 4
+    CHECKED_IN_ROLE_ID: '1454374170388598909',
+    REQUIRED_VOLUNTEER_HOURS: 4,
+    ONBOARDING_REWARDS: {
+        REGISTER: 10,
+        VERIFY_EMAIL: 10,
+        COMPLETE_PROFILE: 10,
+        SUBMIT_APPLICATION: 10,
+        SUBSCRIBE: 25
+    },
+    BADGES: {
+        FOUNDER: { id: 'founder', name: 'Founder', icon: '🚀', description: 'Early supporter of the lab.' },
+        BOUNTY_HUNTER: { id: 'bounty_hunter', name: 'Bounty Hunter', icon: '🎯', description: 'Completed 5+ Bounties.' },
+        VOLUNTEER_STAR: { id: 'volunteer_star', name: 'Volunteer Star', icon: '⭐', description: 'Logged 10+ Volunteer Hours.' },
+        BUG_SQUASHER: { id: 'bug_squasher', name: 'Bug Squasher', icon: '🐛', description: 'Helped fix a bug in the system.' },
+        MAKER: { id: 'maker', name: 'Certified Maker', icon: '🛠️', description: 'Completed safety orientation.' },
+        TRAINED_3D_PRINTER: { id: 'trained_3d_printer', name: '3D Printer Certified', icon: '🖨️', description: 'Trained on 3D Printers.' },
+        TRAINED_CO2_LASER: { id: 'trained_co2_laser', name: 'CO2 Laser Certified', icon: '🔦', description: 'Trained on CO2 Laser.' },
+        TRAINED_FIBER_LASER: { id: 'trained_fiber_laser', name: 'Fiber Laser Certified', icon: '⚡', description: 'Trained on Fiber Laser.' }
+    },
+    DISCORD_SHOWCASE_CHANNEL_ID: '1454353592755687575'
 };
 
 export default Constants;

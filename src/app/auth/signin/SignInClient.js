@@ -13,17 +13,6 @@ const ForgotPasswordLink = () => (
     </Link>
 );
 
-const CreateAnAccount = () => {
-    return (
-        <Typography variant="body2" sx={{ color: 'primary.main' }}>
-            Need an account? 
-        <Link href="/auth/register" variant="body2">
-            Sign up
-        </Link>
-        </Typography>
-    );
-}
-
 const SignInClient = ({ providers }) => {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -34,6 +23,17 @@ const SignInClient = ({ providers }) => {
         setSnackbarOpen(false);
     };
 
+
+    const CreateAnAccount = () => {
+        return (
+            <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                Need an account? 
+            <Link href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} variant="body2">
+                Sign up
+            </Link>
+            </Typography>
+        );
+    }
 
     const Title = () => {
         return <h2 style={{ marginBottom: 8 }}>Login</h2>;

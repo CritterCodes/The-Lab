@@ -61,6 +61,12 @@ const PlansPage = () => {
                   <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: "1rem" }}>
                     ${plan.price}/month
                   </Typography>
+                  <Chip 
+                    label="✨ Earn 25 Stake!" 
+                    color="primary" 
+                    size="small" 
+                    sx={{ mb: 2, width: '100%', fontWeight: 'bold' }} 
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                     <div dangerouslySetInnerHTML={{ __html: plan.embed }} />
                   </Box>

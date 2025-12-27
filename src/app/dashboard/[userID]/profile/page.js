@@ -2,7 +2,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Box, Typography, Button, Breadcrumbs, Link, Snackbar, useTheme, Fab, Zoom } from '@mui/material';
+import { Box, Typography, Button, Breadcrumbs, Link, Snackbar, useTheme, Fab, Zoom, Alert } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UserHeader from '@/app/components/profile/header';
 import UserDetailsForm from '@/app/components/profile/details';
@@ -155,6 +155,13 @@ const ViewUserPage = ({ params }) => {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
             />
+
+            {/* Profile Completion Reward Alert */}
+            {(!updatedUser?.bio || !updatedUser?.image) && (
+                <Alert severity="info" sx={{ mt: 2, mx: { xs: 2, md: 0 } }}>
+                    ✨ <strong>Complete your profile</strong> (Bio & Profile Picture) to earn <strong>10 Stake</strong>!
+                </Alert>
+            )}
 
             {/* Tab Content Handling */}
             {/* User Details Tab */}

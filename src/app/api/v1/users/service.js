@@ -5,6 +5,7 @@ import UserModel from "./model";
 import Constants from "@/lib/constants";
 import AuthService from '../../auth/[...nextauth]/service.js';
 import DiscordService from "@/lib/discord";
+import NotificationService from "../notifications/service";
 import { 
     sendApplicationReceivedEmail, 
     sendStatusChangeEmail, 
@@ -82,18 +83,29 @@ export default class UserService {
     /**
      * ✅ Fetch all users
      * @param {boolean} isPublic - If true, return only public users
-     * @returns {Array} - List of all users
+     * @param {number} page - Page number
+     * @param {number} limit - Items per page
+     * @returns {Object} - List of users and pagination info
      */
-    static getAllUsers = async (isPublic = false) => {
+    static getAllUsers = async (isPublic = false, page = 1, limit = 10) => {
         try {
-            const users = await UserModel.getAllUsers(isPublic);
+            const skip = (page - 1) * limit;
+            const users = await UserModel.getAllUsers(isPublic, skip, limit);
+            const total = await UserModel.countUsers(isPublic);
+            
             const decryptedUsers = users.map(user => {
                 // Decrypt fields for each user
                 user.email = AuthService.decryptEmail(user.email);
                 if(user.phoneNumber) user.phoneNumber = AuthService.decryptPhone(user.phoneNumber);
                 return user;
             });
-            return decryptedUsers;
+            
+            return { 
+                users: decryptedUsers, 
+                total, 
+                page, 
+                totalPages: Math.ceil(total / limit) 
+            };
         } catch (error) {
             console.error("Error in UserService.getAllUsers:", error);
             throw new Error("Failed to fetch all users.");
@@ -125,6 +137,16 @@ export default class UserService {
             
             const currentUser = await UserModel.getUserByQuery(searchObj);
             
+            // Check for profile completion reward
+            if (currentUser && (!currentUser.bio || !currentUser.image)) {
+                const willHaveBio = updateData.bio || currentUser.bio;
+                const willHaveImage = updateData.image || currentUser.image;
+                
+                if (willHaveBio && willHaveImage) {
+                     updateData.stake = (currentUser.stake || 0) + Constants.ONBOARDING_REWARDS.COMPLETE_PROFILE;
+                }
+            }
+
             // Track changes for notifications
             let statusChanged = false;
             let applicationSubmitted = false;
@@ -168,11 +190,35 @@ export default class UserService {
                             approvedLogs.push(newLog);
                         }
                     }
+
+                    // 3. Check for Volunteer Star Badge (10+ Hours)
+                    // Calculate total approved hours from the NEW state
+                    const totalApprovedHours = newLogs
+                        .filter(l => l.status === 'approved')
+                        .reduce((acc, log) => acc + (Number(log.hours) || 0), 0);
+                    
+                    const currentBadges = updateData.badges || currentUser.badges || [];
+                    if (totalApprovedHours >= 10 && !currentBadges.includes(Constants.BADGES.VOLUNTEER_STAR.id)) {
+                        console.log(`🌟 Awarding Volunteer Star Badge to ${currentUser.userID}`);
+                        updateData.badges = [...currentBadges, Constants.BADGES.VOLUNTEER_STAR.id];
+                        
+                        // Notify about badge
+                        await NotificationService.create({
+                            userID: currentUser.userID,
+                            type: 'success',
+                            title: 'New Badge Earned!',
+                            message: `You earned the "${Constants.BADGES.VOLUNTEER_STAR.name}" badge for logging 10+ volunteer hours!`,
+                            link: `/dashboard/${currentUser.userID}/profile`,
+                            metadata: { badgeID: Constants.BADGES.VOLUNTEER_STAR.id }
+                        });
+                    }
                 }
 
                 // Check if application was just submitted
                 if (!currentUser.membership?.applicationDate && mergedMembership.applicationDate) {
                     applicationSubmitted = true;
+                    const currentStake = updateData.stake !== undefined ? updateData.stake : (currentUser.stake || 0);
+                    updateData.stake = currentStake + Constants.ONBOARDING_REWARDS.SUBMIT_APPLICATION;
                 }
 
                 // Check if we should auto-update status

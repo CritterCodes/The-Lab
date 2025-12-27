@@ -38,10 +38,13 @@ const providers = [
                     return {
                         userID: newUser.userID,
                         name: `${newUser.firstName} ${newUser.lastName}`,
+                        firstName: newUser.firstName,
+                        lastName: newUser.lastName,
                         username: newUser.username,
                         email: profile.email, // Use profile.email as newUser.email is encrypted
                         role: newUser.role,
-                        image: profile.picture
+                        image: profile.picture,
+                        discordId: newUser.discordId
                     };
                 }
 
@@ -64,10 +67,13 @@ const providers = [
                 return {
                     userID: user.userID,
                     name: `${user.firstName} ${user.lastName}`,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                     username: user.username,
                     email: user.email,
                     role: user.role,
-                    image: profile.picture
+                    image: profile.picture,
+                    discordId: user.discordId
                 };
 
             } catch (error) {
@@ -106,10 +112,13 @@ const providers = [
                 return {
                     userID: newUser.userID,
                     name: `${newUser.firstName} ${newUser.lastName}`,
+                    firstName: newUser.firstName,
+                    lastName: newUser.lastName,
                     username: newUser.username,
                     email: profile.email, // Use profile.email as newUser.email is encrypted
                     role: newUser.role,
-                    image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null
+                    image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
+                    discordId: newUser.discordId
                 };
             }
 
@@ -133,10 +142,13 @@ const providers = [
             return {
                 userID: user.userID,
                 name: `${user.firstName} ${user.lastName}`,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 username: user.username,
                 email: user.email,
                 role: user.role,
                 image: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
+                discordId: user.discordId
             };
         }
     }),
@@ -167,11 +179,14 @@ const providers = [
                     return {
                         userID: user.userID,
                         name: `${user.firstName} ${user.lastName}`,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
                         username: user.username,
                         email: user.email,
                         role: user.role,
                         token: user.token,
-                        image: user.image
+                        image: user.image,
+                        discordId: user.discordId
                     };
                 }
             } catch (error) {
@@ -217,9 +232,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         // Update token with merged user data
                         token.userID = mergedUser.userID;
                         token.name = `${mergedUser.firstName} ${mergedUser.lastName}`;
+                        token.firstName = mergedUser.firstName;
+                        token.lastName = mergedUser.lastName;
                         token.username = mergedUser.username;
                         token.role = mergedUser.role;
                         token.image = mergedUser.image || token.image;
+                        token.discordId = mergedUser.discordId;
                         
                         console.log("✅ Merge Successful");
                     } catch (error) {
@@ -229,9 +247,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     // Standard Sign In
                     token.userID = user.userID;
                     token.name = user.name;
+                    token.firstName = user.firstName;
+                    token.lastName = user.lastName;
                     token.username = user.username;
                     token.role = user.role;
                     token.image = user.image;
+                    token.discordId = user.discordId;
                 }
             }
             return token;
@@ -240,9 +261,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (token) {
                 session.user.userID = token.userID;
                 session.user.name = token.name;
+                session.user.firstName = token.firstName;
+                session.user.lastName = token.lastName;
                 session.user.username = token.username; // save username in session
                 session.user.role = token.role;
                 session.user.image = token.image;
+                session.user.discordId = token.discordId;
             }
             return session;
         }

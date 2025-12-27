@@ -36,6 +36,7 @@ export default function VerifyEmailPage() {
                     const data = await res.json();
                     if (res.ok) {
                         setSteps(prev => [...prev, 'Email verified successfully.']);
+                        setSteps(prev => [...prev, '✨ 10 Stake added to your account!']);
                     } else {
                         setSteps(prev => [...prev, data.error || 'Verification failed.']);
                     }
@@ -47,7 +48,7 @@ export default function VerifyEmailPage() {
     }, [token, isRegistered]);
 
     useEffect(() => {
-        if (steps.length && steps[steps.length - 1] === 'Email verified successfully.') {
+        if (steps.length && steps.includes('✨ 10 Stake added to your account!')) {
             setTimeout(() => {
                 router.push('/auth/signin');
             }, 3000);

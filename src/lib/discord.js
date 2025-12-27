@@ -44,6 +44,16 @@ export default class DiscordService {
     }
 
     /**
+     * Send a message to a specific channel
+     * @param {string} channelId 
+     * @param {string|object} content - Message content string or embed object
+     */
+    static async sendChannelMessage(channelId, content) {
+        const body = typeof content === 'string' ? { content } : content;
+        return await this.request(`/channels/${channelId}/messages`, 'POST', body);
+    }
+
+    /**
      * Add a user to the Discord Guild (Server)
      * Requires 'guilds.join' scope on the user's access token
      * @param {string} discordUserId - The user's Discord ID
@@ -108,6 +118,14 @@ export default class DiscordService {
      */
     static async createInvite(channelId, options = { max_age: 0, max_uses: 0, unique: false }) {
         return await this.request(`/channels/${channelId}/invites`, 'POST', options);
+    }
+
+    /**
+     * Get a guild member
+     */
+    static async getMember(userId) {
+        if (!GUILD_ID) return null;
+        return await this.request(`/guilds/${GUILD_ID}/members/${userId}`, 'GET');
     }
 
     /**

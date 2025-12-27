@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { Box, TextField, Grid, Switch, FormControlLabel, Typography, useTheme, Paper, FormControl, FormLabel, FormGroup, Checkbox, Chip, Autocomplete } from '@mui/material';
+import { Box, TextField, Grid, Switch, FormControlLabel, Typography, useTheme, Paper, FormControl, FormLabel, FormGroup, Checkbox, Chip, Autocomplete, Tooltip } from '@mui/material';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import LanguageIcon from '@mui/icons-material/Language';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import Constants from '@/lib/constants';
 
 const PublicProfileTab = ({ user, onEdit }) => {
     const theme = useTheme();
     const [skillInput, setSkillInput] = useState('');
+
+    // Helper to get badge details
+    const getBadgeDetails = (badgeId) => {
+        const badgeKey = Object.keys(Constants.BADGES).find(key => Constants.BADGES[key].id === badgeId);
+        return badgeKey ? Constants.BADGES[badgeKey] : null;
+    };
 
     const handleCreatorTypeChange = (event) => {
         const { value, checked } = event.target;
@@ -77,6 +84,33 @@ const PublicProfileTab = ({ user, onEdit }) => {
             <Typography variant="caption" display="block" sx={{ mb: 3, color: theme.palette.text.secondary }}>
                 Profiles are public by default. You can toggle this off to keep your profile private.
             </Typography>
+
+            {/* Badges Section */}
+            <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                <Typography variant="subtitle1" gutterBottom>Earned Badges</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {user.badges && user.badges.length > 0 ? (
+                        user.badges.map((badgeId) => {
+                            const badge = getBadgeDetails(badgeId);
+                            if (!badge) return null;
+                            return (
+                                <Tooltip key={badgeId} title={badge.description}>
+                                    <Chip 
+                                        label={`${badge.icon} ${badge.name}`} 
+                                        variant="outlined" 
+                                        color="primary"
+                                        sx={{ fontWeight: 'bold' }}
+                                    />
+                                </Tooltip>
+                            );
+                        })
+                    ) : (
+                        <Typography variant="body2" color="text.secondary">
+                            No badges earned yet. Complete bounties and volunteer hours to earn them!
+                        </Typography>
+                    )}
+                </Box>
+            </Paper>
 
             <Grid container spacing={3}>
                 <Grid item xs={12}>

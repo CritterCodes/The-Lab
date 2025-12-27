@@ -15,7 +15,8 @@ import {
   StepLabel,
   Alert,
   IconButton,
-  Paper
+  Paper,
+  CircularProgress
 } from "@mui/material";
 import { 
     Person as PersonIcon, 
@@ -24,7 +25,11 @@ import {
     People as DirectoryIcon, 
     Help as HelpIcon, 
     Timer as VolunteerIcon,
-    ArrowForwardIos as ArrowIcon
+    ArrowForwardIos as ArrowIcon,
+    BugReport as BugIcon,
+    EmojiEvents as BadgeIcon,
+    Collections as ShowcaseIcon,
+    LocationOn as CheckInIcon
 } from "@mui/icons-material";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -36,6 +41,8 @@ const DashboardPage = ({ params }) => {
   const theme = useTheme();
   const [userData, setUserData] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
 
   const loading = status === 'loading';
 
@@ -70,6 +77,50 @@ const DashboardPage = ({ params }) => {
       fetchUser();
     }
   }, [session]);
+
+  useEffect(() => {
+    const fetchCheckInStatus = async () => {
+      if (session?.user?.userID) {
+        try {
+          const res = await fetch(`/api/v1/users?userID=${session.user.userID}`);
+          if (res.ok) {
+            const data = await res.json();
+            setIsCheckedIn(data.user.isCheckedIn || false);
+          }
+        } catch (error) {
+          console.error("Failed to fetch check-in status", error);
+        }
+      }
+    };
+    
+    if (session) {
+      fetchCheckInStatus();
+    }
+  }, [session]);
+
+  const handleCheckInToggle = async () => {
+    setCheckInLoading(true);
+    try {
+      const res = await fetch('/api/v1/checkin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userID: session.user.userID,
+          action: isCheckedIn ? 'checkout' : 'checkin'
+        }),
+      });
+
+      if (res.ok) {
+        setIsCheckedIn(!isCheckedIn);
+      }
+    } catch (error) {
+      console.error("Failed to toggle check-in", error);
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
 
   if (loading || loadingUser) {
     return <LoadingTerminal steps={loadingSteps} />;
@@ -130,6 +181,12 @@ const DashboardPage = ({ params }) => {
           desc: 'Plans & Billing'
       },
       { 
+          title: 'Check In', 
+          icon: <CheckInIcon fontSize="large" />, 
+          path: `/dashboard/checkin`,
+          desc: 'Check in/out of the lab'
+      },
+      { 
           title: 'Bounties', 
           icon: <BountyIcon fontSize="large" />, 
           path: `/dashboard/bounties`,
@@ -146,6 +203,24 @@ const DashboardPage = ({ params }) => {
           icon: <VolunteerIcon fontSize="large" />, 
           path: `/dashboard/${session.user.userID}/volunteer`,
           desc: 'Log hours'
+      },
+      { 
+          title: 'Showcase', 
+          icon: <ShowcaseIcon fontSize="large" />, 
+          path: `/dashboard/showcase`,
+          desc: 'Member projects'
+      },
+      { 
+          title: 'Badges', 
+          icon: <BadgeIcon fontSize="large" />, 
+          path: `/dashboard/badges`,
+          desc: 'View achievements'
+      },
+      { 
+          title: 'Bug Tracker', 
+          icon: <BugIcon fontSize="large" />, 
+          path: `/dashboard/bugs`,
+          desc: 'Report issues'
       },
       { 
           title: 'Support', 
@@ -187,6 +262,47 @@ const DashboardPage = ({ params }) => {
           Welcome, {displayName}!
         </Typography>
       </Box>
+
+      {/* Quick Actions */}
+      <Card 
+        variant="outlined" 
+        sx={{ 
+          mb: 1, 
+          p: 2, 
+          background: isCheckedIn 
+            ? `linear-gradient(45deg, ${theme.palette.success.dark}, ${theme.palette.success.main})`
+            : `linear-gradient(45deg, ${theme.palette.grey[800]}, ${theme.palette.grey[900]})`,
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Box>
+          <Typography variant="h6">
+            {isCheckedIn ? "You are checked in!" : "You are currently away"}
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            {isCheckedIn ? "Don't forget to check out when you leave." : "Ready to make something awesome?"}
+          </Typography>
+        </Box>
+        <Button 
+          variant="contained" 
+          color={isCheckedIn ? "error" : "success"}
+          onClick={handleCheckInToggle}
+          disabled={checkInLoading}
+          startIcon={checkInLoading ? <CircularProgress size={20} color="inherit" /> : <CheckInIcon />}
+          sx={{ 
+            backgroundColor: isCheckedIn ? 'white' : theme.palette.success.light,
+            color: isCheckedIn ? theme.palette.error.main : theme.palette.success.contrastText,
+            '&:hover': {
+              backgroundColor: isCheckedIn ? '#f5f5f5' : theme.palette.success.main,
+            }
+          }}
+        >
+          {isCheckedIn ? "Check Out" : "Check In"}
+        </Button>
+      </Card>
 
       {/* Membership Progress */}
       {showProgress && (
@@ -312,32 +428,31 @@ const DashboardPage = ({ params }) => {
                         textAlign: 'center',
                         cursor: 'pointer',
                         border: `1px solid ${theme.palette.divider}`,
-                        backgroundColor: 'rgba(0, 255, 0, 0.02)',
+                        backgroundColor: theme.palette.background.paper,
                         transition: 'all 0.2s ease-in-out',
                         height: '100%',
-                        minHeight: 140,
+                        minHeight: 160,
                         '&:hover': {
                             transform: 'translateY(-4px)',
-                            boxShadow: `0 4px 20px rgba(0, 255, 0, 0.15)`,
-                            borderColor: theme.palette.primary.main,
-                            backgroundColor: 'rgba(0, 255, 0, 0.05)',
+                            boxShadow: `0 4px 20px ${item.color}40`,
+                            borderColor: item.color,
                         }
                     }}
                 >
                     <Box sx={{ 
-                        color: theme.palette.primary.main, 
+                        color: item.color, 
                         mb: 1.5,
                         p: 1.5,
                         borderRadius: '50%',
-                        backgroundColor: 'rgba(0, 255, 0, 0.1)'
+                        backgroundColor: `${item.color}15`
                     }}>
                         {item.icon}
                     </Box>
                     <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 'bold', mb: 0.5 }}>
                         {item.title}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {item.desc}
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                        {item.description || item.desc}
                     </Typography>
                 </Paper>
             </Grid>
