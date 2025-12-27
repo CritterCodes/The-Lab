@@ -16,6 +16,7 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import HistoryIcon from '@mui/icons-material/History';
 
 const getUserNavigation = (userID) => [
     {
@@ -97,6 +98,11 @@ const ADMIN_NAVIGATION = [
         segment: 'dashboard/volunteers',
         title: 'Volunteers',
         icon: <VolunteerActivismIcon />
+    },
+    {
+        segment: 'dashboard/checkin-log',
+        title: 'Check-in Log',
+        icon: <HistoryIcon />
     }
 ];
 

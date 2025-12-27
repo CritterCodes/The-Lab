@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from "../../../../../auth";
 import UserModel from "../users/model";
+import CheckInModel from "./model";
+import NotificationService from "../notifications/service";
 import DiscordService from "@/lib/discord";
 import Constants from "@/lib/constants";
 
@@ -13,6 +15,23 @@ export async function GET(req) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const { searchParams } = new URL(req.url);
+        const mode = searchParams.get('mode'); // 'status' (default) or 'log'
+
+        if (mode === 'log') {
+            // Admin only check
+            if (session.user.role !== 'admin') {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+            
+            const limit = parseInt(searchParams.get('limit')) || 50;
+            const skip = parseInt(searchParams.get('skip')) || 0;
+            const logs = await CheckInModel.getLogs({}, limit, skip);
+            
+            return NextResponse.json({ logs });
+        }
+
+        // Default: Get User Status
         const user = await UserModel.getUserByQuery({ userID: session.user.userID });
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -49,8 +68,39 @@ export async function POST(req) {
             lastCheckOut: isCheckingIn ? user.lastCheckOut : new Date()
         };
 
-        // Update DB
+        // Update DB User Status
         await UserModel.updateUser({ userID: user.userID }, updates);
+
+        // Create/Update CheckIn Log
+        if (isCheckingIn) {
+            await CheckInModel.createCheckIn(user.userID);
+
+            // Check for Lab Regular Badge (5 Check-ins)
+            try {
+                const checkInCount = await CheckInModel.getCheckInCount(user.userID);
+                if (checkInCount === 5) {
+                    if (!user.badges?.includes(Constants.BADGES.LAB_REGULAR.id)) {
+                        await UserModel.updateUser({ userID: user.userID }, {
+                            badges: [...(user.badges || []), Constants.BADGES.LAB_REGULAR.id],
+                            stake: (user.stake || 0) + Constants.BADGES.LAB_REGULAR.stakeReward
+                        });
+
+                        await NotificationService.create({
+                            userID: user.userID,
+                            type: 'success',
+                            title: 'Badge Earned!',
+                            message: `You earned the "${Constants.BADGES.LAB_REGULAR.name}" badge +${Constants.BADGES.LAB_REGULAR.stakeReward} Stake!`,
+                            link: `/dashboard/badges`,
+                            metadata: { badgeID: Constants.BADGES.LAB_REGULAR.id }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error checking lab regular badge:", error);
+            }
+        } else {
+            await CheckInModel.completeCheckIn(user.userID);
+        }
 
         // Update Discord Role
         if (user.discordId) {

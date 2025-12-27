@@ -26,11 +26,14 @@ const Constants = {
         FOUNDER: { id: 'founder', name: 'Founder', icon: '🚀', description: 'Early supporter of the lab.' },
         BOUNTY_HUNTER: { id: 'bounty_hunter', name: 'Bounty Hunter', icon: '🎯', description: 'Completed 5+ Bounties.' },
         VOLUNTEER_STAR: { id: 'volunteer_star', name: 'Volunteer Star', icon: '⭐', description: 'Logged 10+ Volunteer Hours.' },
-        BUG_SQUASHER: { id: 'bug_squasher', name: 'Bug Squasher', icon: '🐛', description: 'Helped fix a bug in the system.' },
+        BUG_SQUASHER: { id: 'bug_squasher', name: 'Bug Squasher', icon: '🐛', description: 'Helped fix a bug in the system.', stakeReward: 25 },
         MAKER: { id: 'maker', name: 'Certified Maker', icon: '🛠️', description: 'Completed safety orientation.' },
         TRAINED_3D_PRINTER: { id: 'trained_3d_printer', name: '3D Printer Certified', icon: '🖨️', description: 'Trained on 3D Printers.' },
         TRAINED_CO2_LASER: { id: 'trained_co2_laser', name: 'CO2 Laser Certified', icon: '🔦', description: 'Trained on CO2 Laser.' },
-        TRAINED_FIBER_LASER: { id: 'trained_fiber_laser', name: 'Fiber Laser Certified', icon: '⚡', description: 'Trained on Fiber Laser.' }
+        TRAINED_FIBER_LASER: { id: 'trained_fiber_laser', name: 'Fiber Laser Certified', icon: '⚡', description: 'Trained on Fiber Laser.' },
+        SHOWCASE_PIONEER: { id: 'showcase_pioneer', name: 'Showcase Pioneer', icon: '📸', description: 'Posted first project to Showcase.', stakeReward: 10 },
+        COMMUNITY_VOICE: { id: 'community_voice', name: 'Community Voice', icon: '🗣️', description: 'Left 3+ comments on projects.', stakeReward: 5 },
+        LAB_REGULAR: { id: 'lab_regular', name: 'Lab Regular', icon: '📍', description: 'Checked in 5+ times.', stakeReward: 5 }
     },
     DISCORD_SHOWCASE_CHANNEL_ID: '1454353592755687575'
 };

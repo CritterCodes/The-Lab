@@ -19,6 +19,31 @@ export default class PortfolioService {
 
         const createdItem = await PortfolioModel.createItem(item);
 
+        // Check for Showcase Pioneer Badge
+        try {
+            const userItems = await PortfolioModel.getAllItems({ userID: data.userID });
+            if (userItems.length === 1) { // First item
+                const user = await UserModel.getUserByQuery({ userID: data.userID });
+                if (user && !user.badges?.includes(Constants.BADGES.SHOWCASE_PIONEER.id)) {
+                    await UserModel.updateUser({ userID: data.userID }, {
+                        badges: [...(user.badges || []), Constants.BADGES.SHOWCASE_PIONEER.id],
+                        stake: (user.stake || 0) + Constants.BADGES.SHOWCASE_PIONEER.stakeReward
+                    });
+                    
+                    await NotificationService.create({
+                        userID: data.userID,
+                        type: 'success',
+                        title: 'Badge Earned!',
+                        message: `You earned the "${Constants.BADGES.SHOWCASE_PIONEER.name}" badge +${Constants.BADGES.SHOWCASE_PIONEER.stakeReward} Stake!`,
+                        link: `/dashboard/badges`,
+                        metadata: { badgeID: Constants.BADGES.SHOWCASE_PIONEER.id }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error checking showcase badge:", error);
+        }
+
         // Post to Discord
         if (createdItem) {
             try {
@@ -101,6 +126,37 @@ export default class PortfolioService {
         };
 
         await PortfolioModel.addComment(id, comment);
+
+        // Check for Community Voice Badge
+        try {
+            // Count user's comments across all items (This is expensive, maybe optimize later)
+            // For now, we'll just check if they have commented on 3 different items? 
+            // Or just total comments. Let's do total comments for simplicity first.
+            // Actually, we don't have a quick way to count all comments by a user without a new DB query.
+            // Let's assume we can query items where comments.userID == userID
+            
+            // NOTE: This query might be slow if there are many items.
+            const itemsWithComments = await PortfolioModel.getAllItems({ "comments.userID": userID });
+            const uniqueItemsCommented = itemsWithComments.length;
+
+            if (uniqueItemsCommented >= 3 && !user.badges?.includes(Constants.BADGES.COMMUNITY_VOICE.id)) {
+                await UserModel.updateUser({ userID }, {
+                    badges: [...(user.badges || []), Constants.BADGES.COMMUNITY_VOICE.id],
+                    stake: (user.stake || 0) + Constants.BADGES.COMMUNITY_VOICE.stakeReward
+                });
+
+                await NotificationService.create({
+                    userID: userID,
+                    type: 'success',
+                    title: 'Badge Earned!',
+                    message: `You earned the "${Constants.BADGES.COMMUNITY_VOICE.name}" badge +${Constants.BADGES.COMMUNITY_VOICE.stakeReward} Stake!`,
+                    link: `/dashboard/badges`,
+                    metadata: { badgeID: Constants.BADGES.COMMUNITY_VOICE.id }
+                });
+            }
+        } catch (error) {
+            console.error("Error checking community voice badge:", error);
+        }
 
         // Notify owner
         try {

@@ -76,7 +76,6 @@ export default function MembersPage() {
     );
 
     const columns = [
-        { field: 'firstName', headerName: 'First Name', flex: 1 },
         { field: 'lastName', headerName: 'Last Name', flex: 1 },
         { field: 'email', headerName: 'Email', flex: 1.5 },
         { 
@@ -151,13 +150,23 @@ export default function MembersPage() {
 
     return (
         <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
-            <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
-                    Member Management
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    Manage community members and roles
-                </Typography>
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                    <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
+                        Member Management
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Manage community members and roles
+                    </Typography>
+                </Box>
+                <Button 
+                    variant="outlined" 
+                    startIcon={<AccessTimeIcon />}
+                    onClick={() => router.push('/dashboard/checkin-log')}
+                    sx={{ display: { xs: 'none', sm: 'flex' } }}
+                >
+                    Check-In Log
+                </Button>
             </Box>
 
             {isMobile ? (

@@ -72,6 +72,8 @@ export default class BugService {
                 // 2. Bug Squasher Badge
                 if (!submitter.badges?.includes(Constants.BADGES.BUG_SQUASHER.id)) {
                     userUpdates.badges = [...(submitter.badges || []), Constants.BADGES.BUG_SQUASHER.id];
+                    // Add badge reward
+                    userUpdates.stake = (userUpdates.stake || submitter.stake || 0) + Constants.BADGES.BUG_SQUASHER.stakeReward;
                     updated = true;
                     
                     // Notify about badge
@@ -79,7 +81,7 @@ export default class BugService {
                         userID: bug.submittedBy,
                         type: 'success',
                         title: 'New Badge Earned!',
-                        message: `You earned the "${Constants.BADGES.BUG_SQUASHER.name}" badge for helping squash a bug!`,
+                        message: `You earned the "${Constants.BADGES.BUG_SQUASHER.name}" badge +${Constants.BADGES.BUG_SQUASHER.stakeReward} Stake!`,
                         link: `/dashboard/${bug.submittedBy}/profile`,
                         metadata: { badgeID: Constants.BADGES.BUG_SQUASHER.id }
                     });
